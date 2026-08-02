@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["01_core", "02_shell", "03_infra", "04_wiring"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"

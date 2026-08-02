@@ -1,0 +1,13 @@
+[package]
+name = "decalque"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "decalque"
+path = "src/main.rs"
+
+[dependencies]
+decalque-core = { path = "../01_core" }
+decalque-shell = { path = "../02_shell" }
+decalque-infra = { path = "../03_infra" }

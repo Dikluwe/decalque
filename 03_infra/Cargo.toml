@@ -1,0 +1,8 @@
+[package]
+name = "decalque-infra"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+decalque-core = { path = "../01_core" }
+# candidato a confirmar na Fase A da implementação: lopdf (acesso a content stream bruto)
