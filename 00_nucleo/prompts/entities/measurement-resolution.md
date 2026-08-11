@@ -9,9 +9,9 @@ Terceira pergunta do pipeline, e a que tem uma decisão de desenho genuinamente 
 `README.md`. Esta peça define quando uma diferença de posição conta como divergência a reportar,
 versus ruído de precisão numérica aceitável.
 
-## Decisão de desenho a confirmar antes de implementar (não presumir)
+## Decisão de desenho (fechada em 2026-08-11, ADR 0001)
 
-Duas formas candidatas, não mutuamente exclusivas:
+Duas formas, **ambas suportadas desde a versão inicial**:
 
 1. **Tolerância absoluta**: um valor fixo em pontos (por exemplo, `0.5pt`), igual para o documento
    inteiro. Simples, mas cegamente insensível à escala do que está a ser medido — 0.5pt é grande
@@ -21,15 +21,19 @@ Duas formas candidatas, não mutuamente exclusivas:
 2. **Tolerância relativa ao em**: um limiar expresso em fracção do tamanho de fonte do glifo
    medido (por exemplo, `2% do em`) — escala automaticamente com o contexto.
 
-**Antes de implementar**: decidir se a versão inicial suporta só (1), só (2), ou as duas com (1)
-como default e (2) como opção — registar a decisão explicitamente no próprio ficheiro `.rs`
-gerado (doc-comment do tipo), não deixar a escolha implícita no código.
+A tolerância **não é uma constante do domínio**: é um parâmetro do caso de uso (ADR 0001).
+Caso 1 (digital↔digital, paridade de compiladores) usa tolerância apertada — divergência é
+regressão. Caso 2 (scan→digital) usa tolerância mais larga — fontes substituídas e reflow são
+diferenças legitimamente esperadas. Quem escolhe o perfil é o chamador (`02_shell`/CLI), não
+esta peça; aqui ficam apenas as duas formas e o cálculo. Default do Caso 1: `Absolute` com
+0.5pt (paridade com o comportamento validado em P948), `RelativeToEm` disponível como opção.
+Registar esta decisão no doc-comment do tipo gerado, não deixar implícita.
 
 ## Restrições estruturais
 
 - L1: zero I/O, puro cálculo.
 
-## Instrução (esqueleto mínimo, adaptar conforme a decisão acima)
+## Instrução
 
 ```rust
 enum MeasurementResolution {
@@ -57,4 +61,5 @@ Então devolve `0.2` (2% de 10pt)
 
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
-| (preencher na execução) | Criação inicial — decisão de forma (absoluta vs relativa) ainda por confirmar com o dono antes da implementação | `measurement_resolution.rs` |
+| 2026-08-11 | Criação inicial + primeira geração de `01_core` | `measurement_resolution.rs` |
+| 2026-08-11 | ADR 0001: decisão fechada — ambas as formas suportadas; tolerância é parâmetro do caso de uso, não constante do domínio | — |

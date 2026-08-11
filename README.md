@@ -35,8 +35,9 @@ própria, e a resposta de uma condiciona a seguinte:
    limiar provavelmente não deveria ser um valor absoluto fixo (0.5pt faz sentido para texto de
    corpo, mas é enorme relativo a um índice de 6pt, e minúsculo relativo a um título de 40pt) —
    candidato natural: resolução relativa ao tamanho de fonte/em do que está a ser medido, não um
-   número absoluto único para o documento inteiro. **Isto é uma decisão de desenho ainda aberta,
-   não uma resposta já dada** — ver `00_nucleo/prompts/entities/measurement-resolution.md`.
+   número absoluto único para o documento inteiro. **Decisão fechada (ADR 0001)**: ambas as formas
+   suportadas; a tolerância é parâmetro do caso de uso, não constante do domínio — ver
+   `00_nucleo/prompts/entities/measurement-resolution.md`.
 
 Só depois destas três respostas é que faz sentido comparar dois documentos: extrair a lista de
 glifos desenhados de cada um (`GlyphInstance`), emparelhar os correspondentes entre os dois
@@ -44,6 +45,38 @@ glifos desenhados de cada um (`GlyphInstance`), emparelhar os correspondentes en
 precisamente o que está a ser medido), e calcular o delta de posição de cada par, relativo à
 origem apropriada (não necessariamente a origem da página — pode ser a origem do cluster/
 construção a que o glifo pertence, para não confundir "página maior" com "glifo deslocado").
+
+## Escopo: dois casos de uso, camadas distintas de funcionalidade
+
+O Decalque não é uma ferramenta de um único cenário — é o mesmo núcleo geométrico servindo a
+dois casos de uso com exigências diferentes. Deixar isto explícito evita decisões de desenho
+que resolvam um caso e quebrem o outro.
+
+### Caso 1 — Paridade entre versões (o motivador original)
+
+Dois PDFs **digitais** gerados por compiladores/versões diferentes do mesmo documento-fonte
+(por exemplo, duas versões do Typst compilando o mesmo `.typ`). Ambos os lados têm content
+stream com glifos posicionados e `ToUnicode` — o pipeline estrutural completo se aplica sem
+ressalvas. Tolerâncias podem ser apertadas: divergências reais aqui são bugs de regressão.
+
+### Caso 2 — Scan → digital puro (o objetivo principal)
+
+Um PDF **digitalizado** (página como imagem rasterizada, sem texto real) foi convertido para
+um documento digital nativo (por exemplo, via Typst), e o Decalque valida se o PDF gerado
+mantém paridade com o original. Este caso muda a assimetria da comparação:
+
+- O lado do scan **não tem glifos no content stream** — tem `XObject`s de imagem. Extrair a
+  geometria de texto do original exige uma etapa anterior de extração (OCR/análise da imagem),
+  fora do núcleo do Decalque, que produz um `DocumentGeometry` equivalente para alimentar o
+  mesmo pipeline.
+- Diferenças legitimamente esperadas são maiores: fontes substituídas, ligaduras expandidas
+  ("fi" como 1 glifo vs. "f"+"i" separados), reflow de quebra de linha. A política de
+  tolerância e a normalização de emparelhamento (expansão via `ToUnicode`) precisam ser
+  configuráveis por caso de uso, não globais.
+- A comparação continua estrutural — pixels continuam fora do núcleo (sensíveis a DPI,
+  antialiasing, rasterizador; foi essa abordagem que falhou no caso motivador). Comparação
+  visual, se um dia for desejada, é camada opcional fora de `01_core`, com mesmo rasterizador
+  e mesmo DPI nos dois lados.
 
 ## Por que isto existe
 
@@ -70,6 +103,8 @@ decalque/
 
 ## Estado actual
 
-Fase de nucleação — `00_nucleo/prompts/entities/` já tem as specs do domínio central (ver ficheiros
-individuais). Nenhum código Rust ainda. Próximo passo: revisão das specs, depois primeira geração
-de `01_core`.
+`01_core` implementado (2026-08-11): as quatro entidades (`PageGeometry`, `CartesianOrigin`,
+`MeasurementResolution`, `GlyphInstance`/`DocumentGeometry`) e o motor de comparação
+(`engine/compare`), com 21 testes verdes, zero dependências externas, zero I/O. Próximos passos:
+`03_infra` (leitura real de PDF: content stream, `ToUnicode`, construção de `DocumentGeometry`),
+depois `02_shell` (CLI) e `04_wiring`.

@@ -1,0 +1,56 @@
+   Compiling lopdf_probe v0.1.0 (/repos/Antigravity/decalque/_lab/lopdf_probe)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.33s
+     Running `target/debug/lopdf_probe`
+=== Fixtures ===
+- typst.pdf (12528 bytes): PDF real do Typst 0.15.1 (xref tradicional, FlateDecode, ToUnicode)
+    /XRef=0 /ObjStm=0 /FlateDecode=8 /ToUnicode=2 /Encrypt=0
+- typst_xrefstream.pdf (10816 bytes): Typst recompactado via qpdf (xref stream + object streams)
+    /XRef=1 /ObjStm=1 /FlateDecode=10 /ToUnicode=0 /Encrypt=0
+- typst_encrypted.pdf (13721 bytes): Typst criptografado via qpdf (AES-256, user='user')
+    /XRef=0 /ObjStm=0 /FlateDecode=9 /ToUnicode=2 /Encrypt=1
+- scan.pdf (667 bytes): Sintético via lopdf (página só com XObject de imagem)
+    /XRef=1 /ObjStm=0 /FlateDecode=0 /ToUnicode=0 /Encrypt=0
+
+[PASS   ] 1. abre PDF do Typst
+         Document::load ok; versão=1.7; 26 objeto(s); 1 página(s)
+[PASS   ] 2. xref tradicional + xref stream
+         tradicional (typst.pdf): Ok(1) página(s)
+         xref stream (typst_xrefstream.pdf, /XRef=1 no binário): Ok(1) página(s)
+[PASS   ] 3. object streams comprimidos
+         1 página(s) via ObjStm; content extraído de 1; catálogo resolvido (Root = true); /ObjStm=1 no binário
+[PASS   ] 4. FlateDecode
+         página 1: 1991 bytes descomprimidos; head: "/Span<</MCID 0>>BDC\nq 1 0 0 -1 221.58057 282.15778 cm/c0 cs "
+[PASS   ] 5. content stream das páginas
+         get_page_content: 1991 bytes (concatena arrays de /Contents se houver)
+[PASS   ] 6. operadores BT/ET/Tf/Tm/Td/Tj/TJ
+         46 operações decodificadas (typst.pdf + textops.pdf).
+           BT: 4
+           ET: 4
+           Tf: 4
+           Tm: 4
+           Td: 1
+           Tj: 1
+           TJ: 4
+           outros operadores vistos: BDC, EMC, Q, Tr, cm, cs, q, scn
+[PASS   ] 7. dicionário de fontes (/Font)
+         recursos da página: fontes = ["f0", "f1"]
+         objetos /Type /Font no documento: 4
+[PARCIAL] 8. ToUnicode + CMap
+         fonte (9, 0): ToUnicode 731 bytes descomprimidos, bfchar=1 bfrange=0
+             <0000> <FFFF>
+             <0001> <004F>
+             <0002> <0020>
+         fonte (12, 0): ToUnicode 1162 bytes descomprimidos, bfchar=1 bfrange=0
+             <0000> <FFFF>
+             <0001> <0055>
+             <0002> <006D>
+         NOTA: lopdf entrega os bytes do CMap (há um parser interno de CMap em cmap_section.rs, mas é `mod` privado, não exportado); parsear bfchar/bfrange fica por nossa conta.
+[PASS   ] 9. criptografia detectável
+         load(): Ok, mas só 1 objeto (o /Encrypt dict); pages=0; is_encrypted()=true
+         load_with_password(errada) -> invalid password for encrypted PDF [InvalidPassword]
+         load_with_password("user"): 26 objetos, 1 página(s), 39 ops; is_encrypted()=false
+         load()+decrypt("user"): Ok, mas pages=0 (objetos não tinham sido lidos — API enganosa)
+         gate: is_encrypted() apos load(); erro de senha = Error::InvalidPassword (variante propria, distinguivel de parse).
+[PASS   ] 10. PDF 'scan' (só imagem)
+         1 página(s); operadores: ["q", "cm", "Do", "Q"]; imagem Im0 (4x4, 48 bytes)
+           sem texto: nenhum Tj/TJ; parse não falha.

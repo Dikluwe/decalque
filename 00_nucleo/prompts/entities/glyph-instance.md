@@ -18,10 +18,10 @@ colecção de todos os `GlyphInstance` de um PDF, já em coordenadas normalizada
 
 ```rust
 struct GlyphInstance {
-    position: (f64, f64),      // já normalizado (CartesianOrigin::normalize aplicado)
-    codepoint: Option<char>,   // via ToUnicode; None se não mapeado
+    position: (f64, f64),            // já normalizado (CartesianOrigin::normalize aplicado)
+    codepoints: Option<Vec<char>>,   // via ToUnicode; None se não mapeado
     font_size_pt: f64,
-    font_ref: String,          // identificador da fonte no documento (nome do recurso, ou hash — decidir na implementação)
+    font_ref: String,                // identificador da fonte no documento (nome do recurso, ou hash — decidir na implementação)
 }
 
 struct DocumentGeometry {
@@ -30,10 +30,21 @@ struct DocumentGeometry {
 }
 ```
 
-Nota de proveniência (lição do projecto irmão, P948): glifos sem `codepoint` mapeado (peças de
+Nota de proveniência (lição do projecto irmão, P948): glifos sem codepoints mapeados (peças de
 assembly sem entrada em `ToUnicode`, por exemplo) não devem ser descartados — ainda têm posição e
 participam na comparação, só não têm âncora textual para o emparelhamento por conteúdo
 (`engine/compare.md` decide como tratar este caso).
+
+**Por que sequência e não `char` único** (ADR 0001): uma ligadura é um glifo que mapeia para
+vários codepoints — `ToUnicode` normalmente mapeia o glifo "fi" para a sequência `['f','i']`.
+Com `char` único essa informação é perdida e a comparação scan→digital reportaria falsa
+divergência (original com ligadura vs. gerado com "f"+"i" separados). A sequência é a âncora
+de emparelhamento que permite a normalização de ligaduras no motor (`engine/compare.md`).
+
+**Ligação ao Caso 2 (scan→digital)**: esta struct é também o contrato de saída da extracção
+externa (OCR/análise da imagem do scan) — o lado do scan entra no pipeline como um
+`DocumentGeometry` produzido fora do núcleo, na mesma forma. Detalhes em
+`00_nucleo/prompts/case2-scan-to-digital.md` (planeamento, não gera código agora).
 
 ## Critérios de verificação
 
@@ -46,4 +57,5 @@ válido, não excepcional)
 
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
-| (preencher na execução) | Criação inicial | `glyph_instance.rs` |
+| 2026-08-11 | Criação inicial + primeira geração de `01_core` | `glyph_instance.rs` |
+| 2026-08-11 | ADR 0001: `codepoint: Option<char>` → `codepoints: Option<Vec<char>>` (ligaduras); nota de ligação ao Caso 2 | — |

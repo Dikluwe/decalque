@@ -51,4 +51,4 @@ a fórmula completa nos testes, não só o caso `self.y == 0.0`)
 
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
-| (preencher na execução) | Criação inicial | `cartesian_origin.rs` |
+| 2026-08-11 | Criação inicial + primeira geração de `01_core` | `cartesian_origin.rs` |

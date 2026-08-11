@@ -41,4 +41,4 @@ escolhida explicitamente no doc-comment) e `Δheight` é `0.0`
 
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
-| (preencher na execução) | Criação inicial | `page_geometry.rs` |
+| 2026-08-11 | Criação inicial + primeira geração de `01_core` | `page_geometry.rs` |
