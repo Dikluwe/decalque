@@ -1,4 +1,19 @@
-/target
+# Build & Artefatos Rust
+target/
 **/*.rs.bk
+*.rs.bk
+
+# Editores & IDEs
+.vscode/
+.idea/
+*.iml
 *.swp
+*.swo
+*~
+
+# Sistema Operacional
 .DS_Store
+Thumbs.db
+
+# Logs e temporários
+*.log
