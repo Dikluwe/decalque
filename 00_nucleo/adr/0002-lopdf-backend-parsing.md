@@ -11,6 +11,12 @@ Revisões posteriores:
   agrupamento textual, se necessário, é `TextRun` derivado — não implementado); geometria passa
   a dois tipos (`PageBoxModel` bruto + `PageGeometry` resolvido); exemplos alterados para `f64`
   (tipo numérico canónico do núcleo); diagnóstico obrigatório ao detectar `Do` com Form XObject.
+- 2026-08-12 — Fronteira sintaxe/semântica clarificada: `03_infra` decodifica as operações do
+  content stream via `lopdf::content::Content::decode` e entrega `ContentOperation` (tipo de
+  `01_core`); `01_core` interpreta semântica, nunca sintaxe de bytes. Modelo de fonte
+  (larguras + decodificação de códigos de glifo) especificado em
+  `00_nucleo/prompts/pdf-font-model.md` — `ToUnicode` não fornece larguras nem divisão da
+  string em códigos.
 
 ## Contexto
 

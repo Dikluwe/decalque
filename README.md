@@ -26,10 +26,11 @@ própria, e a resposta de uma condiciona a seguinte:
    Dois PDFs do "mesmo" documento podem legitimamente ter folhas de tamanhos diferentes (por
    exemplo, `width: auto` resolvendo para valores distintos em compiladores distintos) — isto não
    é por si só uma divergência a reportar, é o contexto que torna o resto da medição possível.
-2. **Onde fica o ponto (0,0)?** (`CartesianOrigin`) — PDFs não têm uma convenção única de eixo
-   (y pode crescer para cima ou para baixo, dependendo de como o produtor do PDF escreveu o
-   content stream). Sem normalizar isto primeiro, qualquer comparação de posição está a comparar
-   sistemas de coordenadas diferentes sem saber.
+2. **Onde fica o ponto (0,0)?** (`normalize_to_top_left`) — o espaço de usuário do PDF é
+   YUp por especificação (origem no canto inferior esquerdo); a inversão YDown só existe via
+   matriz `cm`, que o intérprete já processa na CTM. Resta só a convenção de saída do
+   relatório: YDown, origem no canto superior esquerdo — uma conversão matemática pura, não
+   uma heurística de detecção.
 3. **Com que resolução/tolerância a posição é medida?** (`MeasurementResolution`) — dois traços
    "na mesma posição" na prática nunca têm exatamente o mesmo float; é preciso um limiar. E esse
    limiar provavelmente não deveria ser um valor absoluto fixo (0.5pt faz sentido para texto de
@@ -92,7 +93,7 @@ PDFs, e reimplementa em Rust para poder ser embutida/reusada (não só um script
 ```
 decalque/
 ├── 00_nucleo/     # Prompts e ADRs (a Semente)
-├── 01_core/       # Modelo de domínio puro: PageGeometry, CartesianOrigin,
+├── 01_core/       # Modelo de domínio puro: PageGeometry, normalize_to_top_left,
 │                  # MeasurementResolution, GlyphInstance, DocumentGeometry,
 │                  # algoritmo de emparelhamento/diff. Zero I/O.
 ├── 02_shell/      # CLI
@@ -103,8 +104,10 @@ decalque/
 
 ## Estado actual
 
-`01_core` implementado (2026-08-11): as quatro entidades (`PageGeometry`, `CartesianOrigin`,
-`MeasurementResolution`, `GlyphInstance`/`DocumentGeometry`) e o motor de comparação
-(`engine/compare`), com 21 testes verdes, zero dependências externas, zero I/O. Próximos passos:
-`03_infra` (leitura real de PDF: content stream, `ToUnicode`, construção de `DocumentGeometry`),
-depois `02_shell` (CLI) e `04_wiring`.
+`01_core` implementado numa primeira versão (2026-08-11) — mas as specs evoluíram desde então
+(2026-08-12): `PageGeometry` ganhou `PageBoxModel`/rotação/`user_unit`, `GlyphInstance` foi
+revisado, e `CartesianOrigin` foi **substituído** pela função pura `normalize_to_top_left`
+(`00_nucleo/prompts/coordinate-normalization.md`). O código actual de `01_core` ainda reflecte
+as specs antigas e aguarda revisão conforme os prompts novos. Próximos passos: revisão de
+`01_core` (page_geometry → font_model + cmap → text_interpreter), depois `03_infra`
+(adaptador lopdf), `02_shell` (CLI) e `04_wiring`.

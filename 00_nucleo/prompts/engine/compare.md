@@ -2,12 +2,14 @@
 
 **Camada**: L1 — `01_core`
 **Arquivo gerado**: `01_core/src/engine/compare.rs` + testes no mesmo ficheiro
+**Depende de**: `00_nucleo/prompts/document-geometry.md` (`DocumentGeometry`), `00_nucleo/prompts/content-stream-text-model.md` (`GlyphInstance`), `00_nucleo/prompts/entities/measurement-resolution.md` (`MeasurementResolution`)
 
 ## Contexto
 
-Dado dois `DocumentGeometry` (já normalizados), emparelhar os `GlyphInstance` correspondentes e
-calcular o delta de posição de cada par, usando a `MeasurementResolution` para decidir o que conta
-como divergência.
+Dado dois `DocumentGeometry` (posições já normalizadas pelo intérprete via
+`normalize_to_top_left` — ver `coordinate-normalization.md`), emparelhar os `GlyphInstance`
+correspondentes e calcular o delta de posição de cada par, usando a `MeasurementResolution`
+para decidir o que conta como divergência.
 
 ## Lições do protótipo Python (P948, projecto irmão) a preservar no desenho
 
@@ -37,6 +39,27 @@ como divergência.
 4. **Glifos sem par de um dos lados não são erro** — documentar explicitamente na struct de
    resultado quantos glifos de cada lado ficaram sem par (pode ser sintoma real — conteúdo a mais/
    a menos — ou limitação do emparelhamento; não decidir qual sem inspecção humana).
+
+## Como o motor usa (e não usa) os campos do novo `GlyphInstance`
+
+O `GlyphInstance` actual (`content-stream-text-model.md`) tem mais campos que o da primeira
+geração. Decisões do dono (2026-08-12):
+
+- **`mapping_status`**: glifos `Mapped` emparelham por âncora textual (lição 1). Glifos
+  `Unmapped` não têm âncora textual — são emparelhados **posicionalmente**: depois do
+  emparelhamento textual, dentro de cada cluster, os `Unmapped` restantes de cada lado são
+  ordenados por x e emparelhados 1-para-1 nessa ordem; excedentes vão para `unmatched_*`.
+  Dois `Unmapped` nunca são considerados "o mesmo" por `glyph_code` — códigos de glifo não
+  são comparáveis entre documentos produzidos por compiladores/subsets de fonte diferentes.
+- **`glyph_code`**: não usado no emparelhamento (ver acima); fica no glifo apenas para
+  diagnóstico/rastreio.
+- **`advance`**: **não usado na v1** — o delta é de posição apenas. Uma métrica futura de
+  "avanço divergente" (largura de texto diferente com posição inicial igual) fica registada
+  como extensão possível, não implementar agora.
+- **`font_size_pt`**: usado no limiar de clusterização (novo cluster quando
+  `|Δy| > 0.5 × font_size_pt` do glifo) e na `MeasurementResolution::RelativeToEm`.
+- **`font_ref`**: **não usado para agrupar na v1** — nomes de fonte divergem legitimamente
+  entre compiladores; agrupar por fonte esconderia divergências de conteúdo.
 
 ## Instrução (esqueleto, refinar na implementação)
 
@@ -99,3 +122,4 @@ Então a sequência textual emparelha (sem divergência de conteúdo) e nenhum d
 |------|--------|----------------------|
 | 2026-08-11 | Criação inicial + primeira geração de `01_core` | `compare.rs` |
 | 2026-08-11 | ADR 0001: normalização de ligaduras (âncora passa a ser `codepoints`); secção de ligação ao Caso 2; novo critério de verificação de ligadura | — |
+| 2026-08-12 | Revisão do dono: secção "Como o motor usa os campos do novo `GlyphInstance`" — `Unmapped` emparelha posicionalmente por x dentro do cluster (nunca por `glyph_code`); `advance` e `font_ref` fora da v1; `font_size_pt` no cluster e na resolução; `Depende de` com `document-geometry.md`; referência à normalização corrigida para `normalize_to_top_left` | — |

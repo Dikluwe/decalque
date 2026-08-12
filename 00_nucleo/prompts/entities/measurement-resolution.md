@@ -22,12 +22,17 @@ Duas formas, **ambas suportadas desde a versão inicial**:
    medido (por exemplo, `2% do em`) — escala automaticamente com o contexto.
 
 A tolerância **não é uma constante do domínio**: é um parâmetro do caso de uso (ADR 0001).
-Caso 1 (digital↔digital, paridade de compiladores) usa tolerância apertada — divergência é
-regressão. Caso 2 (scan→digital) usa tolerância mais larga — fontes substituídas e reflow são
-diferenças legitimamente esperadas. Quem escolhe o perfil é o chamador (`02_shell`/CLI), não
-esta peça; aqui ficam apenas as duas formas e o cálculo. Default do Caso 1: `Absolute` com
-0.5pt (paridade com o comportamento validado em P948), `RelativeToEm` disponível como opção.
-Registar esta decisão no doc-comment do tipo gerado, não deixar implícita.
+**Quem constrói o `MeasurementResolution` é `02_shell`** (CLI), a partir do caso de uso:
+
+- Caso 1 (digital↔digital): `Absolute { tolerance_pt: 0.5 }` como default (paridade com o
+  comportamento validado em P948), `RelativeToEm` disponível como opção;
+- Caso 2 (scan→digital): tolerância mais larga — candidatos iniciais
+  `RelativeToEm { fraction: 0.02 }` ou `Absolute { tolerance_pt: 2.0 }`, a calibrar com
+  documentos reais quando o caso for construído (ver `case2-scan-to-digital.md`).
+
+O motor de comparação (`engine/compare.md`) recebe o `MeasurementResolution` como parâmetro;
+esta peça define apenas as duas formas e o cálculo. Registar esta decisão no doc-comment do
+tipo gerado, não deixar implícita.
 
 ## Restrições estruturais
 
@@ -63,3 +68,4 @@ Então devolve `0.2` (2% de 10pt)
 |------|--------|----------------------|
 | 2026-08-11 | Criação inicial + primeira geração de `01_core` | `measurement_resolution.rs` |
 | 2026-08-11 | ADR 0001: decisão fechada — ambas as formas suportadas; tolerância é parâmetro do caso de uso, não constante do domínio | — |
+| 2026-08-12 | Revisão do dono: quem constrói o perfil é `02_shell`, com valores iniciais explícitos por caso de uso (Caso 1: `Absolute 0.5`; Caso 2: `RelativeToEm 0.02` ou `Absolute 2.0`, a calibrar) | — |

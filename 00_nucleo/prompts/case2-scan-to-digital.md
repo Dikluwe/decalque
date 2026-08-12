@@ -53,6 +53,22 @@ mesmos pontos de fronteira que o Caso 1 já define:
   ter imagem nenhuma. Comparação de `XObject`s por posição/dimensão (sem pixel) fica para a
   spec de elementos não-textuais, quando necessária.
 
+## Atualizações arquitecturais (2026-08-12)
+
+- `CartesianOrigin` foi substituído por `normalize_to_top_left`
+  (`coordinate-normalization.md`). O espaço de usuário PDF é YUp por especificação; a
+  inversão YDown só existe via matriz `cm`, que o intérprete de texto já processa na CTM.
+  Não há mais detecção heurística de orientação.
+- `DocumentGeometry` é definido em prompt próprio (`document-geometry.md`): contém
+  `page: PageGeometry`, `glyphs: Vec<GlyphInstance>` (em ordem de emissão) e
+  `diagnostics: Vec<PageDiagnostic>`. Um por página.
+- O motor de comparação (`engine/compare.md`) foi actualizado para o novo `GlyphInstance`:
+  glifos `Unmapped` (típicos do lado OCR, que pode não ter âncora textual fiável)
+  emparelham posicionalmente, nunca por `glyph_code`.
+- Diagnósticos de página (`ImageOnlyPage`, `NoTextOperators`) definidos em
+  `pdf-scan-like-diagnostic.md` — o lado scan produzirá sempre `ImageOnlyPage`, e isso é
+  **esperado**, não erro.
+
 ## O que falta decidir quando o Caso 2 for construído
 
 1. Formato intermédio da extracção OCR (directo para `DocumentGeometry` vs. ficheiro
