@@ -19,6 +19,9 @@ Decisões do dono (2026-08-12):
   literais/hex, escapes, arrays) é responsabilidade do lopdf, em `03_infra` — `01_core`
   interpreta semântica, nunca sintaxe.
 - `Tc`/`Tw`/`Tz`/`Ts` são **aplicados na v1** (geometria confiável é a razão do Decalque).
+- `Tr` é **registado, não aplicado**: não afecta posição nem avanço, mas o modo em vigor fica
+  em cada glifo (`render_mode`) e o texto invisível (`Tr 3`/`Tr 7`) é emitido com
+  diagnóstico, nunca descartado — é a camada de OCR do Caso 2.
 
 Tipo numérico: `f64`, conforme ADR 0003. Códigos de glifo são inteiros.
 
@@ -59,6 +62,7 @@ pub enum ContentOperation {
     SetWordSpacing { tw: f64 },                           // Tw
     SetHorizontalScaling { tz_percent: f64 },             // Tz
     SetTextRise { ts: f64 },                              // Ts
+    SetTextRenderMode { mode: i32 },                       // Tr (inteiro: ADR 0003)
     ShowText { bytes: Vec<u8> },                          // Tj
     ShowTextAdjusted { items: Vec<TjItem> },              // TJ
     SaveState,                                            // q
@@ -92,6 +96,7 @@ pub struct GlyphInstance {
     pub font_ref: String,
     pub font_size_pt: f64,
     pub mapping_status: TextMappingStatus,
+    pub render_mode: u8,                 // Tr em vigor no momento do desenho; 0..=7
 }
 
 pub enum TextMappingStatus { Mapped, Unmapped }   // PartiallyMapped removido — sem caso real (decisão do dono)
@@ -132,6 +137,7 @@ pub enum TextInterpreterDiagnostic {
     UnsupportedTextOperator,    // UnsupportedTextOp encontrado
     TextOutsideTextObject,      // operador de texto fora de BT/ET
     TrailingGlyphCodeBytes,     // decode de string descartou bytes (ver pdf-font-model.md)
+    InvisibleTextPresent,       // glifos emitidos com Tr 3 ou Tr 7 (texto invisível)
 }
 
 pub fn interpret_text(input: &TextInterpretationInput) -> TextInterpretationOutput;
@@ -144,7 +150,7 @@ diagnóstico de texto).
 ### Máquina de estado
 
 Estado inicial: CTM identidade; matriz de texto e de linha identidade; sem fonte;
-`font_size = 0`; `Tc = 0`; `Tw = 0`; `Tz = 100`; `TL = 0`; `Ts = 0`.
+`font_size = 0`; `Tc = 0`; `Tw = 0`; `Tz = 100`; `TL = 0`; `Ts = 0`; `Tr = 0`.
 
 Semântica dos operadores:
 
@@ -155,6 +161,17 @@ Semântica dos operadores:
 - `Tf`: selecciona fonte e tamanho. Fonte ausente em `fonts` → **não emitir glifos dessa
   fonte** + `MissingFont` (sem larguras, o avanço seria desconhecido e as posições seguintes
   silenciosamente erradas — decisão do dono).
+- `Tr`: define o modo de renderização de texto em vigor. Regras (decisão do dono,
+  2026-08-12):
+  - o modo é **registado em cada glifo** (`GlyphInstance.render_mode`), não interpretado —
+    o núcleo preserva a informação, quem decide o que fazer com ela é o consumidor;
+  - **glifos de modo 3 (invisível) e 7 (só clipping) são emitidos na mesma**, com o
+    `render_mode` correspondente, e o diagnóstico `InvisibleTextPresent` é registado uma vez
+    por página. Não descartar: uma camada de OCR sobre um scan é desenhada exactamente em
+    `Tr 3`, e descartá-la faria uma comparação contra um PDF pesquisável sair vazia — que
+    hoje se lê como paridade perfeita no relatório agregado (`engine/compare.md`);
+  - modo fora de `0..=7` → tratado como `0` e registado `UnsupportedTextOperator`;
+  - `Tr` **não** afecta posição nem avanço.
 - Operadores de texto fora de `BT`/`ET` → ignorados + `TextOutsideTextObject`.
 - Convenção de matrizes (documentar no doc-comment): vectores **coluna**; concatenação à
   esquerda (`nova = operando × corrente`); a posição do glifo é `CTM × Tm` aplicada a `(0,0)`,
@@ -200,7 +217,8 @@ não usa Form XObjects para texto de corpo (ADR 0002, "Validações pendentes").
 
 ## Critérios de verificação
 
-Dado `CTM` identidade, `PageGeometry` 612×792 sem rotação, e operações
+Dado `CTM` identidade, `PageGeometry` 612×792 sem rotação e com `origin == (0.0, 0.0)`, e
+operações
 `BT /f0 12 Tf 1 0 0 1 100 700 Tm (A) Tj ET`
 com `FontModel` mapeando o código de "A", `width_of = 500`
 Quando `interpret_text` corre
@@ -238,6 +256,25 @@ Quando `interpret_text` corre
 Então o glifo é emitido com `mapping_status == Unmapped`, `codepoints == None`, e o
 diagnóstico `UnmappedGlyphs` é registado
 
+Dado `SetTextRenderMode { mode: 0 }` seguido de `Tj` (o caso do Typst, que emite `0 Tr`)
+Quando `interpret_text` corre
+Então os glifos saem com `render_mode == 0`, **sem** diagnóstico algum — em particular sem
+`UnsupportedTextOperator`
+
+Dado `SetTextRenderMode { mode: 3 }` seguido de `Tj`
+Quando `interpret_text` corre
+Então os glifos **são emitidos** com `render_mode == 3` e `InvisibleTextPresent` é registado
+
+Dado `SetTextRenderMode { mode: 3 }`, depois `SetTextRenderMode { mode: 0 }`, com `Tj` após
+cada um
+Quando `interpret_text` corre
+Então o primeiro glifo tem `render_mode == 3` e o segundo `render_mode == 0` (o modo é
+estado, e cada glifo regista o que estava em vigor)
+
+Dado `SetTextRenderMode { mode: 9 }` (fora de `0..=7`)
+Quando `interpret_text` corre
+Então os glifos saem com `render_mode == 0` e `UnsupportedTextOperator` é registado
+
 Dado `UnsupportedTextOp { operator: "'" }`
 Quando `interpret_text` corre
 Então `UnsupportedTextOperator` é registado e a execução continua
@@ -258,3 +295,5 @@ Então são ignorados silenciosamente (classificados `Other` por `03_infra`)
 | 2026-08-12 | Precisão de `Tc`/`Tw`/`Tz`/`Ts`; Unicode inválido → `Unmapped`; `f64` confirmado (ADR 0003) | — |
 | 2026-08-12 | Revisão do dono (análise de prontidão): intérprete recebe **operações decodificadas** (`ContentOperation`), não bytes; modelo de entrada/saída explícito; modelo de fonte extraído para `pdf-font-model.md`; fórmula de avanço e ajuste TJ especificadas; `Tc`/`Tw`/`Tz`/`Ts` aplicados na v1; `Do` com `XObjectInfo` (Form→diagnóstico, imagem→não); diagnósticos divididos (`TextInterpreterDiagnostic` vs. diagnósticos de página adiados); `PartiallyMapped` removido; fonte ausente → sem glifos + `MissingFont`; estado inicial e semântica de operadores definidos; convenção de matrizes explícita; escopo de impacto declarado; critérios com números literais | `glyph_instance.rs` (revisão), `text_interpreter.rs` (novo) |
 | 2026-08-12 | `CartesianOrigin` removido do modelo de entrada — a normalização é função pura `normalize_to_top_left` (`coordinate-normalization.md`); o espaço de usuário PDF é YUp por especificação, a inversão via `cm` é tratada pela CTM | — |
+| 2026-08-12 | Decisão do dono: `Tr` entra no modelo (`ContentOperation::SetTextRenderMode`), o modo em vigor é registado em `GlyphInstance.render_mode`, e glifos de modo 3/7 são emitidos com diagnóstico `InvisibleTextPresent` em vez de descartados (uma camada de OCR sobre scan é `Tr 3`; descartá-la faria a comparação sair vazia). Motivo da entrada: `Tr` não estava na tabela do adaptador e caía em `UnsupportedTextOp` — e o fixture `typst.pdf` mostra que o Typst emite `0 Tr`, ou seja, o diagnóstico dispararia em todas as páginas Typst. `Tr` não afecta posição nem avanço. Estado inicial ganha `Tr = 0`; critérios de modo 0, 3, alternância e valor fora de `0..=7` | `glyph_instance.rs` (revisão), `text_interpreter.rs` (novo) |
+| 2026-08-12 | Critério de posição explicita `origin == (0.0, 0.0)` — `PageGeometry` passou a carregar a origem da caixa efectiva (`page-geometry-model.md`, regra 2b) | — |

@@ -72,6 +72,7 @@ O adaptador **não deve**:
 | `Tw` | `SetWordSpacing { tw }` |
 | `Tz` | `SetHorizontalScaling { tz_percent }` |
 | `Ts` | `SetTextRise { ts }` |
+| `Tr` | `SetTextRenderMode { mode }` |
 | `Tj` | `ShowText { bytes }` (bytes crus, sem parênteses/hex/escapes) |
 | `TJ` | `ShowTextAdjusted { items }` (`TjItem::Text`/`Adjustment`) |
 | `q` | `SaveState` |
@@ -82,11 +83,19 @@ O adaptador **não deve**:
 Regras fora da tabela:
 
 - Operadores da **categoria texto** fora da lista (inclui `'` e `"`) →
-  `UnsupportedTextOp { operator }`. **Nunca** mapear `Tc`/`Tw`/`Tz`/`Ts` como
+  `UnsupportedTextOp { operator }`. **Nunca** mapear `Tc`/`Tw`/`Tz`/`Ts`/`Tr` como
   `UnsupportedTextOp` — eles estão na tabela; aplicá-los ou não é decisão de `01_core`.
-- Operadores não-texto (desenho, cor, clipping, imagem inline `BI`/`EI`) → **descartados**,
-  não entram em `operations` (decisão do dono: manter só o relevante; `Other` existe no enum
-  para compatibilidade futura, mas a v1 descarta).
+  `Tr` foi acrescentado à tabela em 2026-08-12: o fixture `typst.pdf` mostra que o Typst
+  emite `0 Tr`, pelo que a regra anterior produzia `UnsupportedTextOp` em todas as páginas
+  Typst, para um operador semanticamente neutro.
+- Operadores não-texto (desenho, cor, clipping, imagem inline `BI`/`EI`) →
+  `ContentOperation::Other` (decisão do dono, 2026-08-12: **não são descartados**). O vector
+  `operations` fica com a sequência completa do content stream, permitindo reconstruir e
+  auditar a ordem real dos operadores; `01_core` ignora `Other` explicitamente. Esta regra
+  substitui a anterior ("descartados"), que contradizia o critério de verificação de
+  `content-stream-text-model.md`.
+- `Other` **não** carrega o nome do operador na v1: se o diagnóstico vier a precisar de o
+  distinguir, é revisão de prompt, não decisão de implementação.
 
 ### Interface
 
@@ -157,10 +166,15 @@ Quando `load_page_source` é chamado
 Então `operations` contém `BeginText`, `SetFont`, `MoveText`, `ShowText`, `EndText` nesta
 ordem, e `hints.has_text_show_operators == true`
 
-Dado um content stream com `Tc 0.5 Tw 1 Tz 80 Ts 2`
+Dado um content stream com `Tc 0.5 Tw 1 Tz 80 Ts 2 Tr 0`
 Quando `load_page_source` é chamado
-Então produz `SetCharSpacing`, `SetWordSpacing`, `SetHorizontalScaling`, `SetTextRise` —
-**nunca** `UnsupportedTextOp`
+Então produz `SetCharSpacing`, `SetWordSpacing`, `SetHorizontalScaling`, `SetTextRise` e
+`SetTextRenderMode { mode: 0 }` — **nunca** `UnsupportedTextOp`
+
+Dado o fixture `typst.pdf`, que contém `0 Tr`
+Quando `load_page_source` é chamado
+Então `operations` contém `SetTextRenderMode { mode: 0 }` e **nenhum** `UnsupportedTextOp`
+para `Tr`
 
 Dado um operador de texto fora da lista (`'`)
 Quando `load_page_source` é chamado
@@ -168,7 +182,14 @@ Então a operação correspondente é `UnsupportedTextOp { operator: "'" }`
 
 Dado operadores de desenho/cor (`re`, `S`, `rg`, `W`)
 Quando `load_page_source` é chamado
-Então **não** aparecem em `operations` (descartados)
+Então aparecem em `operations` como `ContentOperation::Other`, na posição original da
+sequência (não são descartados)
+
+Dado um content stream `q 1 0 0 -1 0 792 cm BT /F1 12 Tf (A) Tj ET Q` misturado com
+operadores de cor entre `q` e `BT`
+Quando `load_page_source` é chamado
+Então a ordem relativa de `SaveState`, `ConcatMatrix`, `Other`, `BeginText`… é a do content
+stream original (a sequência é reconstruível)
 
 Dado um PDF com fonte Type0 cujo `/W` e `/DW` estão no descendente `/DescendantFonts[0]`
 Quando `load_page_source` é chamado
@@ -192,4 +213,5 @@ Então `box_model.crop_box == None` e `box_model.rotate == Some(90)` (bruto, sem
 |------|--------|----------------------|
 | 2026-08-12 | Criação — sem vazamento de tipos lopdf, conversão para `f64`, gate de criptografia, dados brutos | `lopdf_adapter.rs` (novo) |
 | 2026-08-12 | Adaptador passa a decodificar operações (`ContentOperation`); `RawFontData`; metadados de XObjects; `PageSource` revista | — |
+| 2026-08-12 | Decisão do dono, fecho de contradições de spec: (1) `Tr` acrescentado à tabela de conversão como `SetTextRenderMode { mode }` — sem isso caía na regra de "operador de texto fora da lista" e produzia `UnsupportedTextOp` em todas as páginas Typst, que emitem `0 Tr` (evidência: fixture `typst.pdf`); (2) operadores não-texto passam a `ContentOperation::Other` em vez de descartados, resolvendo a contradição com o critério de verificação de `content-stream-text-model.md` — `operations` fica com a sequência completa e auditável, e `01_core` ignora `Other`. Critérios correspondentes reescritos | `lopdf_adapter.rs` (novo) |
 | 2026-08-12 | Revisão do dono (análise de prontidão): `PdfError` importado de `01_core` (`pdf-error-policy.md`); v1 sem senha; `origin` removido de `PageSource` (origem é derivada por `01_core`); tabela completa de conversão de operadores (incl. `Tc`/`Tw`/`Tz`/`Ts` mapeados, nunca `UnsupportedTextOp`); operadores não-texto descartados; herança de atributos de página; `DescendantFonts` para Type0; `RawFontEncoding`; `XObjectSubtype::Other`; hints em vez de diagnósticos (`PageSourceHints`); `has_text_operators_hint` definido só por `ShowText*`; `ToUnicode` ilegível = ausente; múltiplos `/Contents` concatenados em ordem; `PdfError::Parse` para stream/MediaBox inválidos; `PageNotFound`; fixtures copiados para `03_infra/tests/fixtures/`; secção "Resultado esperado" | `lopdf_adapter.rs` (novo) |

@@ -57,6 +57,7 @@ pub enum PageRotation { Deg0, Deg90, Deg180, Deg270 }
 pub struct PageGeometry {
     pub width: f64,
     pub height: f64,
+    pub origin: (f64, f64),   // x0/y0 da caixa efectiva, em espaço de usuário
     pub rotation: PageRotation,
     pub user_unit: f64,
 }
@@ -80,6 +81,16 @@ Regras de `resolve_page_geometry`:
    Se não existir, `media_box` é a caixa efectiva.
 2. `width` = largura da caixa efectiva (`x1 - x0`), `height` = altura (`y1 - y0`) — **antes da
    rotação**.
+2b. `origin` = `(x0, y0)` da caixa efectiva, **em espaço de usuário do PDF**.
+
+   Motivo (decisão do dono, 2026-08-12): a caixa efectiva não tem de começar em `(0,0)` —
+   uma `CropBox` deslocada é o caso comum, e o canto superior esquerdo visual da página é
+   `(x0, y1)`, não `(0, height)`. Sem este campo a informação perde-se aqui e
+   `normalize_to_top_left` fica impossibilitada de a subtrair, produzindo coordenadas
+   deslocadas por `(x0, y0)` em todo o relatório (ver `coordinate-normalization.md`).
+
+   `origin` **não** entra em `width`/`height`, em `display_size` nem em `size_delta` — é
+   consumida apenas pela normalização de coordenadas. Documentar no doc-comment do campo.
 3. `Rotate`:
    - normalizar usando `rem_euclid(360)`;
    - aceitar 0, 90, 180 e 270;
@@ -128,6 +139,19 @@ Dado um `PageBoxModel` com `crop_box` diferente de `media_box`
 Quando `resolve_page_geometry` é chamado
 Então `width`/`height` vêm da `crop_box` (a `media_box` é ignorada para o tamanho)
 
+Dado `media_box: Rect { x0: 0.0, y0: 0.0, x1: 612.0, y1: 792.0 }` (o caso comum)
+Quando `resolve_page_geometry` é chamado
+Então `origin == (0.0, 0.0)`, `width == 612.0`, `height == 792.0`
+
+Dado `crop_box: Rect { x0: 10.0, y0: 20.0, x1: 610.0, y1: 812.0 }` (caixa deslocada)
+Quando `resolve_page_geometry` é chamado
+Então `origin == (10.0, 20.0)`, `width == 600.0` e `height == 792.0` (a origem não é
+absorvida pelas dimensões)
+
+Dado dois `PageGeometry` de dimensões iguais e `origin` diferente
+Quando `size_delta` e `display_size` são chamados
+Então os resultados são iguais aos de origem zero (a origem não entra em nenhum dos dois)
+
 Dado `rotate: Some(-90)`
 Quando `resolve_page_geometry` é chamado
 Então `rotation == Deg270` e `width`/`height` **não** são trocados
@@ -166,3 +190,4 @@ Então devolve `(0.0, 0.0)` (documenta que `size_delta` não aplica rotação)
 | 2026-08-12 | Criação — decisão do dono: `PageBoxModel` bruto + `PageGeometry` resolvido; rotação não troca width/height; absorve `entities/page-geometry.md` | `page_geometry.rs` (revisão) |
 | 2026-08-12 | Unificação do tipo numérico para `f64` (consistência com `01_core` existente e precisão em transformações); `CropBox` reformulado como precedência; comportamento explícito para `Rotate` inválido (`NonStandardRotation`) e `UserUnit` inválido (`InvalidUserUnit`); `resolve_page_geometry` passa a devolver diagnósticos | — |
 | 2026-08-12 | Revisão do dono: `size_delta` declarado na instrução com regra explícita (tamanho bruto, sem rotação); derives mínimos; restrição explícita de não importar `lopdf`/tipos de `03_infra`; `UserUnit` exige finito e positivo; `Rotate` via `rem_euclid(360)`; `Rect` inválido declarado fora de escopo; âmbito limitado a `page_geometry.rs` (consumidores em prompts próprios); secção "Resultado esperado"; critérios de `size_delta` literais + caso de não-aplicação de rotação | `page-geometry-model.md` |
+| 2026-08-12 | Decisão do dono: `PageGeometry` passa a carregar `origin: (f64, f64)` (x0/y0 da caixa efectiva). A versão anterior descartava a origem em `resolve_page_geometry`, o que impedia `normalize_to_top_left` de a subtrair e deslocava todas as coordenadas do relatório por `(x0, y0)` em páginas com caixa deslocada. `origin` não entra em `width`/`height`, `display_size` nem `size_delta`. Nenhum fixture actual exercita o caso (todos com `MediaBox [0 0 …]`, sem `CropBox`) — cobrir na validação pendente 7 do ADR 0002 | `page-geometry-model.md`, `coordinate-normalization.md` |

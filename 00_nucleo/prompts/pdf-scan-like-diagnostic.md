@@ -55,6 +55,14 @@ Nota: a emissão efectiva destes diagnósticos no resultado final faz parte de
 `document-geometry.md` (que agrega `diagnostics: Vec<PageDiagnostic>` por página); este
 prompt define apenas a taxonomia e a regra de decisão.
 
+Nota sobre scans pesquisáveis (2026-08-12): um scan com camada de OCR **tem** operadores de
+mostrar texto — invisíveis (`Tr 3`), mas presentes. Pela regra 1, essa página **não** produz
+`ImageOnlyPage`, e isso está correcto: ela tem texto comparável, que é o que estes
+diagnósticos descrevem. O sinal de que o texto é invisível vem do intérprete
+(`TextInterpreterDiagnostic::InvisibleTextPresent`, `content-stream-text-model.md`), não
+daqui — coerente com a divisão entre diagnóstico de página e diagnóstico de texto. Um scan
+**sem** camada de OCR continua a produzir `ImageOnlyPage`, como o Caso 2 pressupõe.
+
 ## Resultado esperado
 
 - `01_core/src/entities/page_diagnostic.rs`: `PageDiagnostic`, `diagnose_page`, testes
@@ -84,3 +92,4 @@ v1, diagnosticada pelo intérprete, não aqui)
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
 | 2026-08-12 | Criação — último prompt da lista do ADR 0002; taxonomia de página separada de `TextInterpreterDiagnostic` (decisão do dono); `03_infra` dá hints, `01_core` decide | `page_diagnostic.rs` (novo) |
+| 2026-08-12 | Nota sobre scans pesquisáveis: consequência da decisão de `Tr` (`content-stream-text-model.md`) — camada de OCR conta como texto presente, logo sem `ImageOnlyPage`; o sinal de invisibilidade é do intérprete, não deste prompt | — |

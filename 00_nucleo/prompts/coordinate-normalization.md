@@ -42,8 +42,16 @@ pub fn normalize_to_top_left(
 
 Regras:
 
-- `x_normalizado = point.0` (a função não altera X);
-- `y_normalizado = page_geometry.height - point.1`;
+- `x_normalizado = point.0 - page_geometry.origin.0`;
+- `y_normalizado = page_geometry.height - (point.1 - page_geometry.origin.1)`;
+- A origem da caixa efectiva **é subtraída** (decisão do dono, 2026-08-12). A caixa efectiva
+  não tem de começar em `(0,0)`: com uma `CropBox` deslocada, o canto superior esquerdo
+  visual é `(x0, y1)`, não `(0, height)`. Ignorar a origem desloca todas as coordenadas do
+  relatório por `(x0, y0)`. O desvio cancela-se nos deltas do motor (que mede relativo à
+  origem do cluster) mas **não** se cancela quando os dois lados têm caixas de origem
+  diferente — o cenário do Caso 2. Ver `page-geometry-model.md`, regra 2b;
+- Para o caso comum `origin == (0.0, 0.0)` as fórmulas reduzem-se a `x' = x` e
+  `y' = height - y`;
 - Se o PDF aplicou uma matriz `cm` global que inverte o Y, o intérprete de texto já terá
   processado isso — a posição que chega aqui está no espaço de usuário final da página;
 - **A função não aplica clamp.** Coordenadas fora da caixa da página são normalizadas
@@ -86,9 +94,24 @@ Dado um ponto `(100.0, 900.0)` (fora da página, acima do topo no espaço PDF)
 Quando `normalize_to_top_left` é chamado com `height = 800.0`
 Então devolve `(100.0, -100.0)` (valor negativo na convenção de saída, sem clamp)
 
+Dado um `PageGeometry` com `origin = (10.0, 20.0)`, `height = 792.0` (caixa deslocada)
+E o ponto `(10.0, 812.0)` — o canto superior esquerdo da caixa efectiva
+Quando `normalize_to_top_left` é chamado
+Então devolve `(0.0, 0.0)` (o canto superior esquerdo da caixa é a origem da saída)
+
+Dado o mesmo `PageGeometry` com `origin = (10.0, 20.0)`, `height = 792.0`
+E o ponto `(10.0, 20.0)` — o canto inferior esquerdo da caixa efectiva
+Quando `normalize_to_top_left` é chamado
+Então devolve `(0.0, 792.0)`
+
+Dado um `PageGeometry` com `origin = (0.0, 0.0)` e `height = 800.0`
+Quando `normalize_to_top_left` é chamado com qualquer ponto
+Então o resultado é idêntico ao da fórmula sem origem (o caso comum não regride)
+
 ## Histórico de Revisões
 
 | Data | Motivo | Ficheiros afectados |
 |------|--------|----------------------|
 | 2026-08-12 | Criação — decisão do dono: espaço de usuário PDF é YUp por especificação (ISO 32000-1); a inversão YDown só existe via `cm`, já processada pela CTM do intérprete; a heurística de detecção de `03_infra` é removida; a struct `CartesianOrigin` é substituída por função pura; absorve `_deprecated/cartesian-origin.md` | `coordinate_normalization.rs` (novo), `cartesian_origin.rs` (removido) |
 | 2026-08-12 | Revisão do dono: regra explícita de não-clamp para coordenadas fora da página (clipping é domínio do relatório) + critério correspondente | — |
+| 2026-08-12 | Decisão do dono: a origem da caixa efectiva passa a ser subtraída (`x' = x − origin.0`, `y' = height − (y − origin.1)`), consumindo o campo `origin` novo de `PageGeometry` (`page-geometry-model.md`, regra 2b). A versão anterior assumia caixa com origem `(0,0)` e deslocava todo o relatório por `(x0, y0)` numa `CropBox` deslocada — desvio que cancela nos deltas relativos ao cluster mas não quando os dois lados têm origens diferentes (Caso 2). Critérios de caixa deslocada e de não-regressão do caso comum acrescentados | `coordinate_normalization.rs` (novo), `page_geometry.rs` (revisão) |

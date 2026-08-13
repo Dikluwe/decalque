@@ -60,6 +60,13 @@ geração. Decisões do dono (2026-08-12):
   `|Δy| > 0.5 × font_size_pt` do glifo) e na `MeasurementResolution::RelativeToEm`.
 - **`font_ref`**: **não usado para agrupar na v1** — nomes de fonte divergem legitimamente
   entre compiladores; agrupar por fonte esconderia divergências de conteúdo.
+- **`render_mode`**: **não usado na v1** (decisão do dono, 2026-08-12). Glifos invisíveis
+  (`Tr 3`) participam da comparação como quaisquer outros — é o que permite comparar um
+  scan pesquisável (camada de OCR) contra um digital nativo sem tratamento especial. Filtrar
+  por modo de renderização, se um dia for desejado, é política de relatório (`02_shell`) ou
+  parâmetro do caso de uso, não algoritmo do motor. O diagnóstico que sinaliza a presença de
+  texto invisível é `TextInterpreterDiagnostic::InvisibleTextPresent`
+  (`content-stream-text-model.md`), não sai do motor.
 
 ## Instrução (esqueleto, refinar na implementação)
 
@@ -122,4 +129,5 @@ Então a sequência textual emparelha (sem divergência de conteúdo) e nenhum d
 |------|--------|----------------------|
 | 2026-08-11 | Criação inicial + primeira geração de `01_core` | `compare.rs` |
 | 2026-08-11 | ADR 0001: normalização de ligaduras (âncora passa a ser `codepoints`); secção de ligação ao Caso 2; novo critério de verificação de ligadura | — |
+| 2026-08-12 | `render_mode` acrescentado à secção de uso dos campos: não usado na v1: glifos invisíveis (`Tr 3`, camada de OCR) comparam como quaisquer outros; filtrar por modo é política de relatório, não algoritmo | — |
 | 2026-08-12 | Revisão do dono: secção "Como o motor usa os campos do novo `GlyphInstance`" — `Unmapped` emparelha posicionalmente por x dentro do cluster (nunca por `glyph_code`); `advance` e `font_ref` fora da v1; `font_size_pt` no cluster e na resolução; `Depende de` com `document-geometry.md`; referência à normalização corrigida para `normalize_to_top_left` | — |
