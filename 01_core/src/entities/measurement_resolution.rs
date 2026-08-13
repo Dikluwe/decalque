@@ -1,4 +1,7 @@
+//! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/entities/measurement-resolution.md
+//! @layer L1
+//! @updated 2026-08-12
 //!
 //! Define quando uma diferença de posição conta como divergência a reportar,
 //! versus ruído de precisão numérica aceitável.

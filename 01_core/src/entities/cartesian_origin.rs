@@ -1,8 +1,20 @@
-//! @prompt 00_nucleo/prompts/entities/cartesian-origin.md
+//! Crystalline Lineage
+//! @prompt 00_nucleo/prompts/_deprecated/cartesian-origin.md
+//! @layer L1
+//! @updated 2026-08-12
 //!
 //! Representa a origem e a direcção do eixo y do sistema de coordenadas
 //! nativo de um PDF (já detectadas por `03_infra`), e converte pontos desse
 //! sistema para o sistema comum de comparação.
+//!
+//! ESTADO: ficheiro **a remover**. A spec que o gerou está arquivada em
+//! `_deprecated/`; a substituta é a função pura `normalize_to_top_left`
+//! (`00_nucleo/prompts/coordinate-normalization.md`, ficheiro
+//! `01_core/src/geometry/coordinate_normalization.rs`), ainda não
+//! implementada. O espaço de usuário PDF é YUp por especificação — a detecção
+//! heurística de orientação que este módulo pressupõe deixou de existir no
+//! desenho. A linhagem aponta para a spec arquivada porque é a que este
+//! ficheiro cumpre (ADR 0003).
 
 use super::page_geometry::PageGeometry;
 

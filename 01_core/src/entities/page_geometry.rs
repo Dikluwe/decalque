@@ -1,7 +1,17 @@
-//! @prompt 00_nucleo/prompts/entities/page-geometry.md
+//! Crystalline Lineage
+//! @prompt 00_nucleo/prompts/_deprecated/page-geometry.md
+//! @layer L1
+//! @updated 2026-08-12
 //!
 //! Geometria da página: largura e altura em pontos PDF (1/72 polegada),
 //! a unidade nativa do formato — sem conversão para outra unidade.
+//!
+//! ESTADO: implementa a spec arquivada em `_deprecated/`. A sucessora activa é
+//! `00_nucleo/prompts/page-geometry-model.md` (`Rect`, `PageBoxModel`,
+//! `PageRotation`, `resolve_page_geometry`, `display_size`, `PageGeometry` com
+//! `rotation`/`user_unit`), ainda não implementada. A linhagem aponta para a
+//! spec que este ficheiro de facto cumpre — ADR 0003, regra de código gerado
+//! de spec arquivada.
 
 /// Dimensões de uma página de PDF, em pontos (1/72 polegada).
 ///

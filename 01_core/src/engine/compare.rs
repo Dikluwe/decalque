@@ -1,6 +1,15 @@
+//! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/engine/compare.md
+//! @layer L1
+//! @updated 2026-08-12
 //!
 //! Motor de emparelhamento e comparação de dois `DocumentGeometry`.
+//!
+//! ESTADO: cumpre a revisão de 2026-08-11 da spec. A revisão de 2026-08-12
+//! (secção "Como o motor usa os campos do novo `GlyphInstance`") ainda não
+//! está aplicada: o emparelhamento posicional decide-se aqui por
+//! `codepoints.is_none()`, e não por `mapping_status == Unmapped`, porque o
+//! campo ainda não existe em `GlyphInstance` (ver `glyph_instance.rs`).
 
 use crate::entities::{DocumentGeometry, GlyphInstance, MeasurementResolution};
 

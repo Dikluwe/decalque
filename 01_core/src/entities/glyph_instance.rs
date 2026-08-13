@@ -1,7 +1,20 @@
-//! @prompt 00_nucleo/prompts/entities/glyph-instance.md
+//! Crystalline Lineage
+//! @prompt 00_nucleo/prompts/_deprecated/glyph-instance.md
+//! @layer L1
+//! @updated 2026-08-12
 //!
 //! Unidade atómica de comparação: um glifo desenhado numa posição, e a
 //! colecção de todos os glifos de um documento já em coordenadas normalizadas.
+//!
+//! ESTADO: implementa a spec arquivada em `_deprecated/`. Sucessoras activas,
+//! ainda não implementadas:
+//! - `GlyphInstance` → `00_nucleo/prompts/content-stream-text-model.md`
+//!   (acrescenta `glyph_code`, `advance`, `mapping_status`);
+//! - `DocumentGeometry` → `00_nucleo/prompts/document-geometry.md` (ficheiro
+//!   próprio `entities/document_geometry.rs`, acrescenta `diagnostics`).
+//!
+//! A linhagem aponta para a spec arquivada porque é a que este ficheiro
+//! cumpre — ADR 0003, regra de código gerado de spec arquivada.
 
 use super::page_geometry::PageGeometry;
 
