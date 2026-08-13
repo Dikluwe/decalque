@@ -5,8 +5,10 @@ pub mod cartesian_origin;
 pub mod glyph_instance;
 pub mod measurement_resolution;
 pub mod page_geometry;
+pub mod pdf_error;
 
 pub use cartesian_origin::{AxisDirection, CartesianOrigin};
 pub use glyph_instance::{DocumentGeometry, GlyphInstance};
 pub use measurement_resolution::MeasurementResolution;
 pub use page_geometry::PageGeometry;
+pub use pdf_error::PdfError;

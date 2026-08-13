@@ -2,11 +2,17 @@
 //! normalização de coordenadas, resolução de medição e motor de comparação.
 //! Zero I/O, zero dependências externas.
 
+pub mod content;
 pub mod engine;
 pub mod entities;
 
+pub use content::{
+    build_font_model, parse_tounicode_cmap, CmapDiagnostic, CmapEntry, CmapMapping,
+    CmapParseResult, FontModel, FontModelDiagnostic, FontWidths, GlyphCodeDecoder, RawFontData,
+    RawFontEncoding, RawFontSubtype,
+};
 pub use engine::{compare, ComparisonReport, GlyphPair};
 pub use entities::{
     AxisDirection, CartesianOrigin, DocumentGeometry, GlyphInstance, MeasurementResolution,
-    PageGeometry,
+    PageGeometry, PdfError,
 };
