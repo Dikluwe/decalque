@@ -542,7 +542,7 @@ mod tests {
     fn tolerancia_relativa_ao_em_usa_font_size_do_glifo() {
         // Linha com dois glifos; o segundo desloca 0.15pt em x. (Com um glifo
         // único por cluster a origem seria auto-referente e o delta seria 0.)
-        let mut base = |x2: f64| {
+        let base = |x2: f64| {
             let mut g1 = glifo(100.0, 700.0, Some(vec!['a']));
             let mut g2 = glifo(x2, 700.0, Some(vec!['b']));
             g1.font_size_pt = 10.0;

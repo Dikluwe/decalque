@@ -359,7 +359,7 @@ fn inteiro_be(bytes: &[u8]) -> u32 {
 /// Descodifica UTF-16BE. `None` se o comprimento for ímpar em bytes ou se as
 /// unidades não formarem Unicode válido (surrogate solitário, por exemplo).
 fn utf16be(bytes: &[u8]) -> Option<Vec<char>> {
-    if bytes.len() % 2 != 0 {
+    if !bytes.len().is_multiple_of(2) {
         return None;
     }
     let unidades: Vec<u16> = bytes
