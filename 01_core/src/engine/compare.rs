@@ -5,11 +5,22 @@
 //!
 //! Motor de emparelhamento e comparação de dois `DocumentGeometry`.
 //!
-//! ESTADO: cumpre a revisão de 2026-08-11 da spec. A revisão de 2026-08-12
-//! (secção "Como o motor usa os campos do novo `GlyphInstance`") ainda não
-//! está aplicada: o emparelhamento posicional decide-se aqui por
-//! `codepoints.is_none()`, e não por `mapping_status == Unmapped`, porque o
-//! campo ainda não existe em `GlyphInstance` (ver `glyph_instance.rs`).
+//! ESTADO: cumpre a revisão de 2026-08-11 da spec. Divergências por aplicar,
+//! todas decididas em 2026-08-12:
+//!
+//! 1. Referência do cluster: este código usa a posição do primeiro glifo em
+//!    ordem de leitura; a spec passou ao **deslocamento mediano dos pares**.
+//!    Consequência do desenho actual: se o glifo deslocado for o primeiro da
+//!    linha, o par dele mede 0.0 e os vizinhos medem o simétrico do
+//!    deslocamento real (atribuição invertida). Nenhum dos testes deste
+//!    ficheiro põe o glifo deslocado em primeiro lugar, por isso passam todos.
+//! 2. Métricas agregadas: aqui são `f64` e saem `0.0` com `pairs` vazio — que
+//!    se lê como paridade perfeita. A spec passou a `Option<f64>` + `Coverage`.
+//! 3. `cluster_shifts` (deslocamento sistemático por linha) não existe aqui.
+//! 4. Emparelhamento posicional decide-se por `codepoints.is_none()` e não por
+//!    `mapping_status == Unmapped`, campo que ainda não existe em
+//!    `GlyphInstance` (ver `glyph_instance.rs`).
+//! 5. `render_mode` não existe no glifo; sem efeito no motor, que não o usa.
 
 use crate::entities::{DocumentGeometry, GlyphInstance, MeasurementResolution};
 

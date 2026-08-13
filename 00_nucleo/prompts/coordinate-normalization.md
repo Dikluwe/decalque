@@ -47,9 +47,9 @@ Regras:
 - A origem da caixa efectiva **é subtraída** (decisão do dono, 2026-08-12). A caixa efectiva
   não tem de começar em `(0,0)`: com uma `CropBox` deslocada, o canto superior esquerdo
   visual é `(x0, y1)`, não `(0, height)`. Ignorar a origem desloca todas as coordenadas do
-  relatório por `(x0, y0)`. O desvio cancela-se nos deltas do motor (que mede relativo à
-  origem do cluster) mas **não** se cancela quando os dois lados têm caixas de origem
-  diferente — o cenário do Caso 2. Ver `page-geometry-model.md`, regra 2b;
+  relatório por `(x0, y0)`. O desvio cancela-se nos deltas do motor (que mede relativo ao
+  deslocamento mediano de cada cluster) mas **não** se cancela quando os dois lados têm
+  caixas de origem diferente — o cenário do Caso 2. Ver `page-geometry-model.md`, regra 2b;
 - Para o caso comum `origin == (0.0, 0.0)` as fórmulas reduzem-se a `x' = x` e
   `y' = height - y`;
 - Se o PDF aplicou uma matriz `cm` global que inverte o Y, o intérprete de texto já terá

@@ -42,13 +42,20 @@ mesmos pontos de fronteira que o Caso 1 já define:
 
 - Ligadura expandida: "fi" (1 glifo) vs. "f"+"i" (2 glifos) — resolvido pela normalização.
 - Fonte substituída: métricas diferentes → posições de glifos subsequentes na mesma linha
-  deslocam-se sistematicamente. O delta relativo à origem do cluster (lição 2 de P948) mitiga;
-  a tolerância mais larga absorve o resto. Se não bastar, pode ser preciso um modo de
+  deslocam-se sistematicamente. O delta relativo ao deslocamento mediano do cluster (lição 2
+  de P948, revista em 2026-08-12) mitiga — e, sendo mediano, absorve o deslocamento comum da
+  linha em vez de o herdar do primeiro glifo; a tolerância mais larga absorve o resto. Se não bastar, pode ser preciso um modo de
   comparação por palavra/linha em vez de por glifo — decisão a tomar com dados reais, não agora.
 - Reflow de quebra de linha: OCR/transcrição pode quebrar linhas em pontos diferentes. A
   clusterização por proximidade vertical assume linhas equivalentes nos dois lados — este é o
   **maior risco conhecido** do Caso 2 sobre o desenho actual, a validar com um documento real
   quando o caso for construído.
+
+  Actualização 2026-08-12: o risco continua, mas passa a ser **observável**. Quando o reflow
+  desalinha os clusters, o emparelhamento degrada-se e isso aparece agora na `Coverage` do
+  relatório (`engine/compare.md`, achado 5) — antes, um emparelhamento quase todo falhado
+  produzia mediana `0.0` sobre os poucos pares sobreviventes, indistinguível de paridade
+  perfeita. A cobertura é o primeiro sinal a olhar num relatório do Caso 2, antes da mediana.
 - Imagens: o scan inteiro é um `XObject`; o gerado pode reutilizar imagens recortadas ou não
   ter imagem nenhuma. Comparação de `XObject`s por posição/dimensão (sem pixel) fica para a
   spec de elementos não-textuais, quando necessária.
@@ -67,7 +74,13 @@ mesmos pontos de fronteira que o Caso 1 já define:
   emparelham posicionalmente, nunca por `glyph_code`.
 - Diagnósticos de página (`ImageOnlyPage`, `NoTextOperators`) definidos em
   `pdf-scan-like-diagnostic.md` — o lado scan produzirá sempre `ImageOnlyPage`, e isso é
-  **esperado**, não erro.
+  **esperado**, não erro. Ressalva: um scan **pesquisável** (com camada de OCR já embutida)
+  tem operadores de texto invisível (`Tr 3`) e por isso **não** produz `ImageOnlyPage` — o
+  sinal nesse caso é `InvisibleTextPresent`, do intérprete. Os dois cenários de scan são
+  distinguíveis, mas por diagnósticos diferentes.
+- O relatório expõe `cluster_shifts` (`engine/compare.md`): um deslocamento sistemático de
+  linha — sintoma típico de fonte substituída, esperado no Caso 2 — deixa de se confundir com
+  divergência glifo a glifo, porque aparece em campo próprio em vez de inflacionar os deltas.
 
 ## O que falta decidir quando o Caso 2 for construído
 
