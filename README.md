@@ -105,9 +105,9 @@ decalque/
 ## Estado actual
 
 `PageGeometry`, o modelo de fontes, o parser `ToUnicode`/CMap, `PdfError`,
-`normalize_to_top_left` e o intérprete de content stream já refletem as
-especificações activas de `01_core`.
+`normalize_to_top_left`, o intérprete de content stream e o adaptador
+`lopdf` já refletem as especificações activas.
 `CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
-consome a origem da caixa efectiva. O próximo passo é materializar `03_infra`
-(adaptador lopdf), seguido de diagnósticos/`DocumentGeometry`, revisão do motor,
-`02_shell` (CLI) e `04_wiring`.
+consome a origem da caixa efectiva. O próximo passo é materializar os diagnósticos
+de página e `DocumentGeometry`, seguido da revisão do motor, `02_shell` (CLI) e
+`04_wiring`.

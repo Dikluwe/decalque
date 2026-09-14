@@ -5,4 +5,4 @@ edition.workspace = true
 
 [dependencies]
 decalque-core = { path = "../01_core" }
-# candidato a confirmar na Fase A da implementação: lopdf (acesso a content stream bruto)
+lopdf = { version = "0.44", default-features = false }
