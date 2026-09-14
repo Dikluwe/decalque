@@ -42,13 +42,26 @@ O detector roda em CPU com MKL-DNN desativado por compatibilidade com Paddle 3.3
 de palavra estimadas pelo Paddle não são solicitadas. Tokens apenas recebem
 `line_geometry_ref` quando aparecem em uma única linha detectada; sua caixa continua `null`.
 
+## Geometria de palavras pelos pixels
+
+Depois da associação de linhas, segmente as lacunas reais de tinta na imagem:
+
+```sh
+.venv-paddle/bin/python 05_scan/word_geometry_detector.py scan-with-lines.json documento.png > scan-with-words.json
+```
+
+O estágio só aceita uma linha quando a quantidade de segmentos observados coincide com a
+quantidade de palavras reconhecidas. Ele não usa a subdivisão proporcional do Paddle. Tokens
+recebem caixa apenas em correspondência textual exata e única; todos os segmentos permanecem
+disponíveis em `word_segments`, mesmo quando o VLM diverge.
+
 ## Conversão para pontos PDF
 
 O catálogo v2 inclui o tamanho visual da página candidata. Depois de associar as linhas,
 converta a geometria observada de pixels para pontos:
 
 ```sh
-python3 05_scan/coordinate_transform.py scan-with-lines.json candidate-fonts.json > scan-points.json
+python3 05_scan/coordinate_transform.py scan-with-words.json candidate-fonts.json > scan-points.json
 ```
 
 A transformação só é criada quando a proporção da imagem e a do PDF diferem no máximo 0,5%.

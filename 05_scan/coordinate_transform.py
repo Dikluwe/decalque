@@ -95,6 +95,8 @@ def enrich_page(
         convert_node(region, transform)
         for detected_line in region.get("detected_lines", []):
             convert_node(detected_line, transform)
+            for word_segment in detected_line.get("word_segments", []):
+                convert_node(word_segment, transform)
         for line in region.get("lines", []):
             convert_node(line, transform)
             for token in line.get("tokens", []):

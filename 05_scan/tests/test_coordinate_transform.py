@@ -19,7 +19,15 @@ class CoordinateTransformTests(unittest.TestCase):
                 {
                     "bbox": [100, 200, 1100, 400],
                     "polygon": [[100, 200], [1100, 200], [1100, 400], [100, 400]],
-                    "detected_lines": [{"bbox": [120, 220, 900, 260], "polygon": None}],
+                    "detected_lines": [
+                        {
+                            "bbox": [120, 220, 900, 260],
+                            "polygon": None,
+                            "word_segments": [
+                                {"bbox": [120, 220, 300, 260], "polygon": None}
+                            ],
+                        }
+                    ],
                     "lines": [{"bbox": None, "polygon": None, "tokens": []}],
                 }
             ],
@@ -34,6 +42,10 @@ class CoordinateTransformTests(unittest.TestCase):
         self.assertEqual(
             output["regions"][0]["detected_lines"][0]["bbox_pt"],
             [60, 110, 450, 130],
+        )
+        self.assertEqual(
+            output["regions"][0]["detected_lines"][0]["word_segments"][0]["bbox_pt"],
+            [60, 110, 150, 130],
         )
         self.assertIsNone(output["regions"][0]["lines"][0]["bbox_pt"])
 

@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+"""Derive word boxes from observed ink gaps inside detected text lines."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+
+WORDS = re.compile(r"\S+", re.UNICODE)
+
+
+def ink_segments(
+    ink: list[list[bool]], offset_x: int, offset_y: int, minimum_word_gap: int
+) -> list[list[int]]:
+    if not ink or not ink[0] or minimum_word_gap < 1:
+        return []
+    width = len(ink[0])
+    active = [any(row[x] for row in ink) for x in range(width)]
+    components = []
+    x = 0
+    while x < width:
+        if not active[x]:
+            x += 1
+            continue
+        start = x
+        while x + 1 < width and active[x + 1]:
+            x += 1
+        components.append([start, x])
+        x += 1
+    if not components:
+        return []
+
+    groups = [components[0][:]]
+    for start, end in components[1:]:
+        gap = start - groups[-1][1] - 1
+        if gap < minimum_word_gap:
+            groups[-1][1] = end
+        else:
+            groups.append([start, end])
+
+    boxes = []
+    for start, end in groups:
+        ys = [y for y, row in enumerate(ink) if any(row[start : end + 1])]
+        boxes.append(
+            [offset_x + start, offset_y + min(ys), offset_x + end + 1, offset_y + max(ys) + 1]
+        )
+    return boxes
+
+
+def build_word_segments(
+    line: dict[str, Any], boxes: list[list[int]], minimum_gap: int
+) -> None:
+    line["word_segments"] = []
+    line["word_geometry_status"] = "unknown"
+    words = WORDS.findall(line.get("text") or "")
+    if not words or len(words) != len(boxes):
+        return
+    line["word_geometry_status"] = "observed"
+    line["word_segments"] = [
+        {
+            "id": f'{line["id"]}:{index}',
+            "text": word,
+            "bbox": box,
+            "polygon": [
+                [box[0], box[1]],
+                [box[2], box[1]],
+                [box[2], box[3]],
+                [box[0], box[3]],
+            ],
+            "association_confidence": 1.0,
+            "source": "ink-gap-segmentation",
+            "minimum_word_gap_px": minimum_gap,
+        }
+        for index, (word, box) in enumerate(zip(words, boxes))
+    ]
+
+
+def attach_word_geometry(
+    page: dict[str, Any], image: Any, minimum_gap_ratio: float = 0.18
+) -> dict[str, Any]:
+    import cv2
+
+    height, width = image.shape[:2]
+    for region in page.get("regions", []):
+        for line in region.get("detected_lines", []):
+            build_word_segments(line, [], 0)
+            bbox = line.get("bbox")
+            if not isinstance(bbox, list) or len(bbox) != 4:
+                continue
+            x0, y0, x1, y1 = [int(round(value)) for value in bbox]
+            x0, y0 = max(0, x0), max(0, y0)
+            x1, y1 = min(width, x1), min(height, y1)
+            if x0 >= x1 or y0 >= y1:
+                continue
+            crop = image[y0:y1, x0:x1]
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+            _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+            ink = binary > 0
+            minimum_gap = max(2, int(math.ceil((y1 - y0) * minimum_gap_ratio)))
+            boxes = ink_segments(ink.tolist(), x0, y0, minimum_gap)
+            build_word_segments(line, boxes, minimum_gap)
+
+        segments = [
+            segment
+            for line in region.get("detected_lines", [])
+            for segment in line.get("word_segments", [])
+        ]
+        for semantic_line in region.get("lines", []):
+            for token in semantic_line.get("tokens", []):
+                if token.get("kind") == "whitespace":
+                    continue
+                matches = [
+                    segment
+                    for segment in segments
+                    if segment["text"].casefold() == (token.get("text") or "").casefold()
+                    and segment["id"].startswith(f'{token.get("line_geometry_ref")}:')
+                ]
+                if len(matches) == 1:
+                    token["bbox"] = matches[0]["bbox"]
+                    token["polygon"] = matches[0]["polygon"]
+                    token["geometry_source"] = matches[0]["source"]
+    return page
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("scan_json", type=Path)
+    parser.add_argument("image", type=Path)
+    parser.add_argument("--minimum-gap-ratio", type=float, default=0.18)
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        import cv2
+
+        pages = json.loads(args.scan_json.read_text(encoding="utf-8"))
+        if len(pages) != 1:
+            raise ValueError("esta versão aceita uma imagem de uma página")
+        image = cv2.imread(str(args.image), cv2.IMREAD_COLOR)
+        if image is None:
+            raise ValueError("imagem não pôde ser lida")
+        if pages[0].get("width") != image.shape[1] or pages[0].get("height") != image.shape[0]:
+            raise ValueError("dimensões da imagem diferem da observação VLM")
+        output = [attach_word_geometry(pages[0], image, args.minimum_gap_ratio)]
+        json.dump(output, sys.stdout, ensure_ascii=False, separators=(",", ":"))
+        sys.stdout.write("\n")
+        return 0
+    except Exception as error:
+        print(f"word-geometry-detector: {error}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
