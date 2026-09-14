@@ -14,6 +14,7 @@ from typing import Any
 
 
 NORMALIZE = re.compile(r"\s+", re.UNICODE)
+TYPOGRAPHIC_MEASURES = ("x_height_pt", "ascender_height_pt", "descender_depth_pt")
 
 
 def key(text: str | None) -> str:
@@ -72,6 +73,8 @@ def candidate_words(glyphs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def compare(
     page: dict[str, Any], catalog: dict[str, Any], absolute_tolerance_pt: float = 1.5,
     relative_tolerance_em: float = 0.1, minimum_baseline_confidence: float = 0.5,
+    typographic_absolute_tolerance_pt: float = 0.75,
+    typographic_relative_tolerance_em: float = 0.06,
 ) -> dict[str, Any]:
     candidates = candidate_words(catalog.get("glyphs", []))
     by_text: dict[str, list[dict[str, Any]]] = {}
@@ -117,6 +120,27 @@ def compare(
                     status = "preserved"
                 else:
                     status = "unknown"
+                observed_profile = segment.get("typographic_profile") or {}
+                candidate_profile = segment.get("candidate_typographic_profile") or {}
+                typographic_deltas = {
+                    measure: observed_profile[measure] - candidate_profile[measure]
+                    for measure in TYPOGRAPHIC_MEASURES
+                    if isinstance(observed_profile.get(measure), (int, float))
+                    and isinstance(candidate_profile.get(measure), (int, float))
+                }
+                typographic_tolerance = max(
+                    typographic_absolute_tolerance_pt,
+                    typographic_relative_tolerance_em * candidate["font_size_pt"],
+                )
+                if typographic_deltas:
+                    typography_status = (
+                        "preserved" if all(abs(delta) <= typographic_tolerance for delta in typographic_deltas.values())
+                        else "violated"
+                    )
+                    typography_reason = None
+                else:
+                    typography_status = "unknown"
+                    typography_reason = "no-comparable-typographic-measure"
                 results.append({
                     "word": segment["text"], "status": status, "deltas_pt": deltas,
                     "tolerance_pt": tolerance, "scan_bbox_pt": scan,
@@ -128,9 +152,12 @@ def compare(
                     "candidate_line_id": candidate["line_id"],
                     "horizontal_status": horizontal_status,
                     "vertical_status": vertical_status,
-                    "typography_status": "unknown",
-                    "typography_reason": "candidate-shape-evidence-absent",
-                    "observed_typographic_profile": segment.get("typographic_profile"),
+                    "typography_status": typography_status,
+                    "typography_reason": typography_reason,
+                    "typographic_deltas_pt": typographic_deltas,
+                    "typographic_tolerance_pt": typographic_tolerance,
+                    "observed_typographic_profile": observed_profile or None,
+                    "candidate_typographic_profile": candidate_profile or None,
                 })
             if len(candidate_line_ids) == 1:
                 line_status = "preserved"
@@ -154,13 +181,19 @@ def main() -> int:
     parser.add_argument("--absolute-tolerance-pt", type=float, default=1.5)
     parser.add_argument("--relative-tolerance-em", type=float, default=0.1)
     parser.add_argument("--minimum-baseline-confidence", type=float, default=0.5)
+    parser.add_argument("--typographic-absolute-tolerance-pt", type=float, default=0.75)
+    parser.add_argument("--typographic-relative-tolerance-em", type=float, default=0.06)
     args = parser.parse_args()
     try:
         pages = json.loads(args.scan_json.read_text(encoding="utf-8"))
         catalog = json.loads(args.candidate_catalog.read_text(encoding="utf-8"))
         if len(pages) != 1:
             raise ValueError("esta versão compara uma página por execução")
-        json.dump(compare(pages[0], catalog, args.absolute_tolerance_pt, args.relative_tolerance_em, args.minimum_baseline_confidence), sys.stdout, ensure_ascii=False, separators=(",", ":"))
+        json.dump(compare(
+            pages[0], catalog, args.absolute_tolerance_pt, args.relative_tolerance_em,
+            args.minimum_baseline_confidence, args.typographic_absolute_tolerance_pt,
+            args.typographic_relative_tolerance_em,
+        ), sys.stdout, ensure_ascii=False, separators=(",", ":"))
         sys.stdout.write("\n")
         return 0
     except Exception as error:

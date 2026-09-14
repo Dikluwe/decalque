@@ -17,6 +17,12 @@ o perfil `unknown`. Acentos impedem inferir altura-x pelo topo da caixa. A ausê
 rasterizada da fonte candidata mantém `typography_status: unknown`: nome e tamanho declarados no
 PDF não provam equivalência visual.
 
+O candidato deve ser rasterizado diretamente na resolução do scan. Perfis de palavras com
+correspondência textual exata e única são comparáveis medida a medida. Ao menos uma medida
+homóloga é obrigatória: deltas dentro da tolerância são `preserved`, fora dela são `violated`;
+sem medida homóloga o resultado tipográfico é `unknown`. Esse veredito cobre o perfil medido,
+não identidade absoluta da família da fonte.
+
 ## Observáveis
 
 - envelope, baseline e confiança usados permanecem disponíveis;

@@ -37,6 +37,14 @@ class ScanComparePipelineTests(unittest.TestCase):
             }]
             return page
 
+        def candidate_profile(page, *_):
+            segment = page["regions"][0]["detected_lines"][0]["word_segments"][0]
+            segment["candidate_typographic_profile"] = {
+                "status": "observed", "x_height_pt": 5,
+                "ascender_height_pt": None, "descender_depth_pt": None,
+            }
+            return page
+
         catalog = {
             "page": {"width_pt": 100, "height_pt": 100},
             "glyphs": [
@@ -49,6 +57,7 @@ class ScanComparePipelineTests(unittest.TestCase):
             "url", "model", "cpu", "en", 0,
             vlm_provider=vlm, line_provider=lines, image_loader=lambda _: object(),
             catalog_loader=lambda *_: catalog, word_enricher=words,
+            candidate_profile_enricher=candidate_profile,
         )
         self.assertEqual(result["comparison"]["counts"]["preserved"], 1)
         self.assertEqual(result["comparison"]["coverage"], {"comparable": 1, "total_scan": 1})
@@ -56,6 +65,7 @@ class ScanComparePipelineTests(unittest.TestCase):
         profile = result["observation"]["regions"][0]["detected_lines"][0]["word_segments"][0]["typographic_profile"]
         self.assertEqual(profile["status"], "observed")
         self.assertEqual(profile["x_height_pt"], 5)
+        self.assertEqual(result["comparison"]["words"][0]["typography_status"], "preserved")
 
 
 if __name__ == "__main__":

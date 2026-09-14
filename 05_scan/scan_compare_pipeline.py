@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import candidate_font_matcher
+import candidate_raster_profile
 import coordinate_transform
 import line_geometry_matcher
 import paddle_line_detector
@@ -47,6 +48,7 @@ def run_pipeline(
     image_loader: Callable[[Path], Any] | None = None,
     catalog_loader: Callable[[Path, Path, int], dict[str, Any]] = load_catalog,
     word_enricher: Callable[[dict[str, Any], Any], dict[str, Any]] = word_geometry_detector.attach_word_geometry,
+    candidate_profile_enricher: Callable[..., dict[str, Any]] = candidate_raster_profile.enrich_page,
 ) -> dict[str, Any]:
     if image_loader is None:
         import cv2
@@ -65,6 +67,7 @@ def run_pipeline(
     page = word_enricher(page, image)
     page = coordinate_transform.enrich_page(page, catalog)
     page = typographic_profile.enrich_page(page)
+    page = candidate_profile_enricher(page, catalog, candidate_path, page_index)
     page = candidate_font_matcher.enrich_page(page, catalog, str(candidate_path))
     report = scan_word_compare.compare(page, catalog)
     return {"schema_version": 1, "observation": page, "comparison": report}

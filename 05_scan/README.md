@@ -109,13 +109,14 @@ python3 05_scan/scan_word_compare.py scan-points.json candidate-fonts.json > com
 
 O relatório compara início, fim, largura horizontal e baseline, inclui cobertura e testemunhas e
 detecta reflow quando uma linha observada corresponde a várias linhas candidatas. O perfil
-tipográfico observado acompanha a palavra, mas `typography_status` continua `unknown` até existir
-evidência rasterizada da forma da fonte candidata.
+tipográfico observado é comparado com o mesmo perfil extraído de uma rasterização do PDF na
+resolução do scan. O `typography_status` cobre essas métricas visuais, não prova identidade
+absoluta da família da fonte; palavras sem medida homóloga permanecem `unknown`.
 
 ## Execução integrada
 
 Com o LM Studio ativo e o catálogo compilado, todo o fluxo de uma página pode ser executado
-por um único comando:
+por um único comando. A comparação tipográfica também requer `pdftocairo` disponível no PATH:
 
 ```sh
 cargo build --bin decalque-font-catalog

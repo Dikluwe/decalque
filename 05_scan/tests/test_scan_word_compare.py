@@ -17,12 +17,14 @@ def scan(*segments):
     return {"regions": [{"detected_lines": [{"id": 1, "word_segments": list(segments)}]}]}
 
 
-def segment(text, bbox, baseline=20, confidence=1.0):
+def segment(text, bbox, baseline=20, confidence=1.0, observed=None, candidate=None):
     return {
         "text": text,
         "bbox_pt": bbox,
         "baseline_y_pt": baseline,
         "baseline_confidence": confidence,
+        "typographic_profile": observed,
+        "candidate_typographic_profile": candidate,
     }
 
 
@@ -33,6 +35,20 @@ class ScanWordCompareTests(unittest.TestCase):
         self.assertEqual(report["words"][0]["vertical_status"], "preserved")
         self.assertEqual(report["coverage"], {"comparable": 1, "total_scan": 1})
         self.assertEqual(report["words"][0]["typography_status"], "unknown")
+
+    def test_matching_raster_profiles_preserve_typography(self):
+        observed = {"status": "observed", "x_height_pt": 5.0}
+        candidate = {"status": "observed", "x_height_pt": 5.4}
+        report = MODULE.compare(scan(segment("casa", [10, 5, 30, 15], observed=observed, candidate=candidate)), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
+        self.assertEqual(report["words"][0]["typography_status"], "preserved")
+
+    def test_typographic_metric_shift_is_violated_with_witness(self):
+        observed = {"status": "observed", "ascender_height_pt": 7.0}
+        candidate = {"status": "observed", "ascender_height_pt": 5.0}
+        report = MODULE.compare(scan(segment("alto", [10, 5, 30, 15], observed=observed, candidate=candidate)), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("alto")]})
+        word = report["words"][0]
+        self.assertEqual(word["typography_status"], "violated")
+        self.assertEqual(word["typographic_deltas_pt"]["ascender_height_pt"], 2)
 
     def test_shift_beyond_tolerance_is_violated_with_witness(self):
         report = MODULE.compare(scan(segment("casa", [14, 5, 34, 15])), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
