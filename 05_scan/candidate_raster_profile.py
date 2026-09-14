@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
@@ -16,7 +19,8 @@ import typographic_profile
 def render_page(
     candidate: Path, page_index: int, width: int, height: int
 ) -> Any:
-    import cv2
+    import numpy as np
+    from PIL import Image
 
     with tempfile.TemporaryDirectory(prefix="decalque-candidate-") as directory:
         prefix = Path(directory) / "page"
@@ -30,10 +34,10 @@ def render_page(
         )
         if process.returncode != 0:
             raise RuntimeError(process.stderr.strip() or "candidate rendering failed")
-        image = cv2.imread(str(prefix.with_suffix(".png")), cv2.IMREAD_COLOR)
-        if image is None:
+        output = prefix.with_suffix(".png")
+        if not output.is_file():
             raise RuntimeError("candidate rendering produced no image")
-        return image
+        return np.asarray(Image.open(output).convert("RGB"))[:, :, ::-1].copy()
 
 
 def ink_observation(image: Any, bounds: list[int]) -> tuple[list[int], list[list[bool]]] | None:
@@ -144,3 +148,28 @@ def enrich_page(
                     }
                 )
     return page
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("scan_json", type=Path)
+    parser.add_argument("candidate_catalog", type=Path)
+    parser.add_argument("candidate_pdf", type=Path)
+    parser.add_argument("--page", type=int, default=0)
+    args = parser.parse_args()
+    try:
+        pages = json.loads(args.scan_json.read_text(encoding="utf-8"))
+        catalog = json.loads(args.candidate_catalog.read_text(encoding="utf-8"))
+        if len(pages) != 1:
+            raise ValueError("esta versão aceita exatamente uma página")
+        output = [enrich_page(pages[0], catalog, args.candidate_pdf, args.page)]
+        json.dump(output, sys.stdout, ensure_ascii=False, separators=(",", ":"))
+        sys.stdout.write("\n")
+        return 0
+    except Exception as error:
+        print(f"candidate-raster-profile: {error}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

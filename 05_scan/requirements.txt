@@ -1,3 +1,5 @@
 paddlepaddle==3.3.1
 paddleocr==3.7.0
 paddlex[ocr,genai-client]==3.7.2
+numpy>=1.26
+Pillow>=10

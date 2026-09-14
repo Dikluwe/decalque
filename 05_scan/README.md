@@ -83,6 +83,12 @@ altura ascendente quando o texto contém ascendentes e profundidade descendente 
 descendentes. Medidas sem sustentação ficam `null`; o nome da fonte candidata não é usado como
 prova visual.
 
+O perfil raster do candidato também pode ser executado isoladamente:
+
+```sh
+python3 05_scan/candidate_raster_profile.py scan-profile.json candidate-fonts.json candidato.pdf > candidate-profile.json
+```
+
 ## Evidência de fonte do PDF candidato
 
 Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF
