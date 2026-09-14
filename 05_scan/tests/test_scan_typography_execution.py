@@ -12,6 +12,22 @@ FIXTURE = ROOT / "03_infra" / "tests" / "fixtures" / "typst.pdf"
 
 
 class ScanTypographyExecutionTests(unittest.TestCase):
+    def test_multiline_layout_corpus_detects_leading_and_reflow(self):
+        result = subprocess.run(
+            [sys.executable, str(SCAN / "layout_corpus.py")],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["mutation_score"], 1.0)
+        self.assertEqual(
+            [(case["candidate"], case["status"]) for case in report["cases"]],
+            [("multiline", "preserved"), ("leading", "violated"),
+             ("reflow", "violated")],
+        )
+        reflow = report["cases"][2]
+        self.assertTrue(any(line["status"] == "violated" for line in reflow["lines"]))
+
     def test_difficult_font_corpus_rejects_all_controlled_mutations(self):
         result = subprocess.run(
             [sys.executable, str(SCAN / "typography_corpus.py")],

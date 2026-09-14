@@ -27,6 +27,10 @@ O terceiro estrato ataca diferenças sutis de composição: tamanho de 19,5 pt o
 2,5 pt. Cada caso deve ser rejeitado por geometria ou perfil tipográfico observado, inclusive
 quando a forma normalizada dos glifos permanece semelhante.
 
+Um corpus multilinha separado mantém texto, fonte e tamanho, alterando o leading em 2,5 pt ou
+forçando uma linha observada a ocupar várias linhas candidatas. O primeiro ataque deve expor
+delta de baseline; o segundo deve produzir testemunha de reflow com mais de um `candidate_line_id`.
+
 ## Robustez do scan
 
 Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px, ruído
