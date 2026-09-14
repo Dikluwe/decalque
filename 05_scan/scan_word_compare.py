@@ -35,6 +35,14 @@ def shape_distance(first: Any, second: Any) -> float | None:
             return None
         values.extend(abs(a - b) for a, b in zip(left, right))
     distances = [sum(values) / len(values)]
+    first_aspect, second_aspect = first.get("aspect_ratio"), second.get("aspect_ratio")
+    if (
+        isinstance(first_aspect, (int, float))
+        and isinstance(second_aspect, (int, float))
+        and first_aspect > 0
+        and second_aspect > 0
+    ):
+        distances.append(abs(math.log(first_aspect / second_aspect)))
     left_occupancy, right_occupancy = first.get("occupancy"), second.get("occupancy")
     if (
         first.get("occupancy_rows") == second.get("occupancy_rows")

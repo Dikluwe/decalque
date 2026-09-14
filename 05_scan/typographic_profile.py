@@ -51,6 +51,7 @@ def ink_shape_descriptor(
         "version": 1,
         "bins": bins,
         "density": len(points) / (width * height),
+        "aspect_ratio": width / height,
         "centroid_x": sum(x + 0.5 for x, _ in points) / len(points) / width,
         "centroid_y": sum(y + 0.5 for _, y in points) / len(points) / height,
         "horizontal_projection": projection(1, height, width),

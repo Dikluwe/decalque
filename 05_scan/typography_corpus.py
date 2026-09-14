@@ -15,7 +15,7 @@ import candidate_raster_profile
 import scan_word_compare
 
 
-KINDS = ("serif", "sans", "mono")
+KINDS = ("serif", "sans", "mono", "bold", "italic", "condensed")
 
 
 def catalog(binary: Path, pdf: Path) -> dict[str, Any]:

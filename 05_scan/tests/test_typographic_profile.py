@@ -31,6 +31,7 @@ class TypographicProfileTests(unittest.TestCase):
         first = MODULE.ink_shape_descriptor(ink, bins=2)
         self.assertEqual(first, MODULE.ink_shape_descriptor(ink, bins=2))
         self.assertEqual(first["density"], 7 / 16)
+        self.assertEqual(first["aspect_ratio"], 1)
         self.assertEqual(len(first["horizontal_projection"]), 2)
         self.assertEqual(len(first["occupancy"]), 8 * 16)
 
