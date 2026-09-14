@@ -26,3 +26,9 @@ palavras candidatas correspondidas sobre o total candidato. Palavras candidatas 
 correspondente são listadas como testemunhas; isso torna omissões do OCR observáveis sem classificá-las
 falsamente como divergência geométrica. Cada violação inclui palavra, caixas, deltas e limiar.
 `Unknown` ou cobertura incompleta nunca são convertidos em sucesso agregado.
+
+O relatório agrega quatro vereditos de página: conteúdo/cobertura, geometria, tipografia e
+resultado geral. Em cada eixo, `violated` domina; ausência ou insuficiência de evidência produz
+`unknown`; `preserved` exige todos os observáveis daquele eixo preservados. O resultado geral
+aplica a mesma ordem aos três eixos, portanto nunca fica preservado com cobertura incompleta ou
+tipografia desconhecida.

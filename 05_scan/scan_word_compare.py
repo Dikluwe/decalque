@@ -17,6 +17,14 @@ NORMALIZE = re.compile(r"\s+", re.UNICODE)
 TYPOGRAPHIC_MEASURES = ("x_height_pt", "ascender_height_pt", "descender_depth_pt")
 
 
+def aggregate_status(statuses: list[str]) -> str:
+    if "violated" in statuses:
+        return "violated"
+    if not statuses or "unknown" in statuses:
+        return "unknown"
+    return "preserved"
+
+
 def shape_distance(first: Any, second: Any) -> float | None:
     if not isinstance(first, dict) or not isinstance(second, dict):
         return None
@@ -243,6 +251,20 @@ def compare(
         for index, candidate in enumerate(candidates)
         if index not in matched_candidate_indices
     ]
+    content_status = (
+        "preserved"
+        if not unmatched_candidates and counts["unknown"] == 0 and len(results) == len(candidates)
+        else "unknown"
+    )
+    geometry_status = aggregate_status(
+        [word["status"] for word in results] + [line["status"] for line in line_results]
+    )
+    typography_status = aggregate_status([
+        word.get("typography_status", "unknown") for word in results
+    ])
+    overall_status = aggregate_status([
+        content_status, geometry_status, typography_status,
+    ])
     return {
         "schema_version": 2, "words": results, "lines": line_results,
         "coverage": {
@@ -252,6 +274,12 @@ def compare(
             "total_candidate": len(candidates),
         },
         "unmatched_candidate_words": unmatched_candidates,
+        "verdict": {
+            "status": overall_status,
+            "content_status": content_status,
+            "geometry_status": geometry_status,
+            "typography_status": typography_status,
+        },
         "counts": counts,
     }
 

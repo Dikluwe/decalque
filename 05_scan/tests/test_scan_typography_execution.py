@@ -30,6 +30,8 @@ class ScanTypographyExecutionTests(unittest.TestCase):
         self.assertEqual(
             [word["text"] for word in omitted["unmatched_candidate_words"]], ["gypq"],
         )
+        self.assertEqual(omitted["verdict"]["content_status"], "unknown")
+        self.assertEqual(omitted["verdict"]["status"], "unknown")
 
     def test_multiline_layout_corpus_detects_leading_and_reflow(self):
         result = subprocess.run(
@@ -46,6 +48,7 @@ class ScanTypographyExecutionTests(unittest.TestCase):
         )
         reflow = report["cases"][2]
         self.assertTrue(any(line["status"] == "violated" for line in reflow["lines"]))
+        self.assertEqual(reflow["words"][1]["status"], "violated")
 
     def test_difficult_font_corpus_rejects_all_controlled_mutations(self):
         result = subprocess.run(
@@ -143,6 +146,12 @@ class ScanTypographyExecutionTests(unittest.TestCase):
         word = json.loads(result.stdout)["words"][0]
         self.assertEqual(word["typography_status"], "violated")
         self.assertGreater(word["typographic_shape_distance"], word["typographic_shape_tolerance"])
+
+        report = json.loads(result.stdout)
+        self.assertEqual(report["verdict"], {
+            "status": "violated", "content_status": "preserved",
+            "geometry_status": "preserved", "typography_status": "violated",
+        })
 
 
 if __name__ == "__main__":

@@ -77,6 +77,7 @@ def run(binary: Path, fixture: Path, compare_script: Path) -> dict[str, Any]:
                 "unknown_scan_words": unknown,
                 "unmatched_candidate_words": report["unmatched_candidate_words"],
                 "coverage": report["coverage"],
+                "verdict": report["verdict"],
             })
         mutations = cases[1:]
         return {

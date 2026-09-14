@@ -69,6 +69,10 @@ class ScanComparePipelineTests(unittest.TestCase):
         self.assertEqual(profile["status"], "observed")
         self.assertEqual(profile["x_height_pt"], 5)
         self.assertEqual(result["comparison"]["words"][0]["typography_status"], "preserved")
+        self.assertEqual(result["comparison"]["verdict"], {
+            "status": "preserved", "content_status": "preserved",
+            "geometry_status": "preserved", "typography_status": "preserved",
+        })
 
 
 if __name__ == "__main__":

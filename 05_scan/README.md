@@ -135,6 +135,8 @@ detecta reflow quando uma linha observada corresponde a várias linhas candidata
 tipográfico observado é comparado com o mesmo perfil extraído de uma rasterização do PDF na
 resolução do scan. O `typography_status` cobre essas métricas visuais, não prova identidade
 absoluta da família da fonte; palavras sem medida homóloga permanecem `unknown`.
+O campo `verdict` agrega conteúdo, geometria e tipografia com precedência conservadora:
+`violated` domina, seguido de `unknown`; somente evidência completa pode produzir `preserved`.
 
 ## Execução integrada
 
