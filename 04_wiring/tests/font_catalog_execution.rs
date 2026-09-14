@@ -33,5 +33,6 @@ fn exporta_glifos_e_fontes_do_pdf_real_em_json() {
     assert!(stdout.contains("\"page\":{\"width_pt\":"));
     assert!(stdout.contains("\"base_font\":\"TARKWA+LibertinusSerif-Bold-Identity-H\""));
     assert!(stdout.contains("\"font_size_pt\":24"));
+    assert!(stdout.contains("\"advance\":"));
     assert!(stdout.ends_with("]}\n"));
 }

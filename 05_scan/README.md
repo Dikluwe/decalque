@@ -86,6 +86,19 @@ não prova sozinho que os pixels do scan foram impressos com a mesma fonte.
 Runs puramente RTL, como árabe isolado, são alinhados em ordem Unicode lógica. Texto bidi
 misto e fontes sem `/BaseFont` (observado em emoji colorido) permanecem sem inferência segura.
 
+## Comparação scan → digital por palavra
+
+Com geometria em pontos e o catálogo candidato, gere o primeiro relatório comparativo:
+
+```sh
+python3 05_scan/scan_word_compare.py scan-points.json candidate-fonts.json > comparison.json
+```
+
+O relatório compara início, fim e largura horizontal, inclui cobertura e testemunhas e detecta
+reflow quando uma linha observada corresponde a várias linhas candidatas. Vertical e tipografia
+continuam `unknown`, pois caixa de tinta não é baseline e fonte candidata não comprova a fonte
+impressa no scan.
+
 ## Testes do adaptador
 
 ```sh

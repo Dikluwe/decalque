@@ -78,13 +78,14 @@ fn main() {
             .map(|points| points.iter().collect::<String>());
         let base_font = font_names.get(&glyph.font_ref).and_then(|name| name.as_deref());
         print!(
-            "{{\"text\":{},\"font_ref\":{},\"base_font\":{},\"font_size_pt\":{},\"position\":[{},{}]}}",
+            "{{\"text\":{},\"font_ref\":{},\"base_font\":{},\"font_size_pt\":{},\"position\":[{},{}],\"advance\":{}}}",
             text.as_deref().map(json_string).unwrap_or_else(|| "null".to_string()),
             json_string(&glyph.font_ref),
             base_font.map(json_string).unwrap_or_else(|| "null".to_string()),
             glyph.font_size_pt,
             glyph.position.0,
             glyph.position.1,
+            glyph.advance,
         );
     }
     println!("]}}");

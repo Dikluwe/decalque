@@ -1,0 +1,23 @@
+# Prompt: comparação scan→digital por palavra
+
+**Camada**: adaptador externo do Caso 2
+**Depende de**: `scan-word-geometry.md`, `scan-pixel-to-point.md`, `candidate-font-evidence.md`
+
+## Obrigação
+
+Comparar segmentos de palavra observados no scan com palavras reconstruídas dos glifos do PDF
+candidato. Somente correspondência textual exata e única é comparável. Medir em X o início, fim
+e largura; tolerância é o máximo entre valor absoluto e fracção do tamanho da fonte candidata.
+
+Uma linha do scan cujas palavras correspondem a mais de uma linha candidata é `violated` por
+reflow. Tipografia permanece `unknown`: a fonte declarada pelo candidato não prova a fonte dos
+pixels. A coordenada Y permanece `unknown` até existir estimativa de baseline comparável.
+
+## Vereditos
+
+- `preserved`: correspondência única e os três deltas X estão dentro da tolerância;
+- `violated`: correspondência única com delta X fora da tolerância, ou reflow demonstrado;
+- `unknown`: texto ausente/repetido, geometria ausente ou evidência insuficiente.
+
+Cobertura é sempre apresentada com as métricas. Cada violação inclui palavra, caixas, deltas e
+limiar. `Unknown` nunca é convertido em sucesso agregado.
