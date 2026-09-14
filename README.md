@@ -111,5 +111,5 @@ decalque/
 consome a origem da caixa efectiva. Os diagnósticos de página, `DocumentGeometry` e a
 revisão do motor de comparação também já estão materializados. `02_shell` já aplica o
 perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura. `04_wiring` liga
-`PageSource` ao pipeline de geometria, fontes, interpretação e diagnósticos. O parsing da
-CLI ainda aguarda especificação própria.
+`PageSource` ao pipeline de geometria, fontes, interpretação e diagnósticos. A CLI mínima
+do Caso 1 compara dois PDFs com `decalque <referencia.pdf> <candidato.pdf> [--page <indice>]`.

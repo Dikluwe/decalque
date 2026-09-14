@@ -10,6 +10,7 @@ use decalque_core::{
     TextInterpretationInput, TextInterpreterDiagnostic,
 };
 use decalque_infra::PageSource;
+use std::path::Path;
 
 /// Resultado completo da materialização de uma página.
 ///
@@ -58,6 +59,14 @@ pub fn materialize_page(source: PageSource) -> MaterializedPage {
         font_diagnostics,
         text_diagnostics: interpretation.diagnostics,
     }
+}
+
+/// Carrega e materializa uma página de PDF pelo adaptador configurado.
+pub fn load_materialized_page(
+    path: &Path,
+    page_index: usize,
+) -> Result<MaterializedPage, decalque_core::PdfError> {
+    decalque_infra::load_page_source(path, page_index).map(materialize_page)
 }
 
 #[cfg(test)]
