@@ -42,6 +42,20 @@ O detector roda em CPU com MKL-DNN desativado por compatibilidade com Paddle 3.3
 de palavra estimadas pelo Paddle não são solicitadas. Tokens apenas recebem
 `line_geometry_ref` quando aparecem em uma única linha detectada; sua caixa continua `null`.
 
+## Conversão para pontos PDF
+
+O catálogo v2 inclui o tamanho visual da página candidata. Depois de associar as linhas,
+converta a geometria observada de pixels para pontos:
+
+```sh
+python3 05_scan/coordinate_transform.py scan-with-lines.json candidate-fonts.json > scan-points.json
+```
+
+A transformação só é criada quando a proporção da imagem e a do PDF diferem no máximo 0,5%.
+Ela preserva os campos em pixels e acrescenta `bbox_pt`/`polygon_pt`. Proporção divergente,
+crop desconhecido ou dimensões inválidas deixam a transformação e as coordenadas em pontos
+como `unknown`/`null`.
+
 ## Evidência de fonte do PDF candidato
 
 Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF

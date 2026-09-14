@@ -2,6 +2,7 @@
 //! @prompt 00_nucleo/prompts/candidate-font-evidence.md
 
 use decalque::materialize_page;
+use decalque_core::entities::{display_size, PageRotation};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::Path;
@@ -56,8 +57,17 @@ fn main() {
         .map(|font| (font.resource_name.clone(), font.base_font.clone()))
         .collect();
     let materialized = materialize_page(source);
+    let (width_pt, height_pt) = display_size(&materialized.geometry.page);
+    let rotation = match materialized.geometry.page.rotation {
+        PageRotation::Deg0 => 0,
+        PageRotation::Deg90 => 90,
+        PageRotation::Deg180 => 180,
+        PageRotation::Deg270 => 270,
+    };
 
-    print!("{{\"schema_version\":1,\"page_index\":{page_index},\"glyphs\":[");
+    print!(
+        "{{\"schema_version\":2,\"page_index\":{page_index},\"page\":{{\"width_pt\":{width_pt},\"height_pt\":{height_pt},\"rotation\":{rotation}}},\"glyphs\":["
+    );
     for (index, glyph) in materialized.geometry.glyphs.iter().enumerate() {
         if index > 0 {
             print!(",");
