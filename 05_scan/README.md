@@ -28,6 +28,20 @@ PaddleOCR baixa os modelos locais de detecção de layout.
 Também são aceitos PDFs. Use `--base-url`, `--model` e `--device` para substituir os padrões.
 O processo retorna código 2 quando faltam dependências ou quando o provedor falha.
 
+## Evidência de fonte do PDF candidato
+
+Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF
+candidato e enriqueça os tokens alinhados:
+
+```sh
+cargo run -q --bin decalque-font-catalog -- candidato.pdf > candidate-fonts.json
+python3 05_scan/candidate_font_matcher.py scan.json candidate-fonts.json > enriched.json
+```
+
+A família e o tamanho só são preenchidos quando o token inteiro coincide com glifos de uma
+única fonte e tamanho. O valor descreve a fonte declarada pelo PDF candidato como hipótese;
+não prova sozinho que os pixels do scan foram impressos com a mesma fonte.
+
 ## Testes do adaptador
 
 ```sh

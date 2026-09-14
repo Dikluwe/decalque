@@ -23,6 +23,7 @@ def unknown_font() -> dict[str, Any]:
         "style": None,
         "weight": None,
         "size_px": None,
+        "size_pt": None,
         "confidence": None,
         "evidence": [],
     }

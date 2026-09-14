@@ -7,6 +7,10 @@ edition.workspace = true
 name = "decalque"
 path = "src/main.rs"
 
+[[bin]]
+name = "decalque-font-catalog"
+path = "src/bin/font_catalog.rs"
+
 [dependencies]
 decalque-core = { path = "../01_core" }
 decalque-shell = { path = "../02_shell" }
