@@ -7,8 +7,78 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import sys
 from typing import Any
+
+
+TOKEN_PATTERN = re.compile(r"\w+|\s+|[^\w\s]+", re.UNICODE)
+
+
+def unknown_font() -> dict[str, Any]:
+    """Return an explicit lack of typographic evidence."""
+    return {
+        "status": "unknown",
+        "family": None,
+        "style": None,
+        "weight": None,
+        "size_px": None,
+        "confidence": None,
+        "evidence": [],
+    }
+
+
+def tokenize_line(text: str) -> list[dict[str, Any]]:
+    tokens = []
+    for match in TOKEN_PATTERN.finditer(text):
+        value = match.group(0)
+        if value.isspace():
+            kind = "whitespace"
+        elif value[0].isalnum() or value[0] == "_":
+            kind = "word"
+        else:
+            kind = "punctuation"
+        tokens.append(
+            {
+                "kind": kind,
+                "text": value,
+                "span": [match.start(), match.end()],
+                "bbox": None,
+                "polygon": None,
+                "recognition_confidence": None,
+                "font": unknown_font(),
+            }
+        )
+    return tokens
+
+
+def derive_lines(text: str | None) -> list[dict[str, Any]]:
+    if not text:
+        return []
+    lines = []
+    offset = 0
+    for part in text.splitlines(keepends=True):
+        if part.endswith("\r\n"):
+            content, break_after = part[:-2], "crlf"
+        elif part.endswith("\n"):
+            content, break_after = part[:-1], "lf"
+        elif part.endswith("\r"):
+            content, break_after = part[:-1], "cr"
+        else:
+            content, break_after = part, None
+        lines.append(
+            {
+                "text": content,
+                "span": [offset, offset + len(content)],
+                "break_after": break_after,
+                "bbox": None,
+                "polygon": None,
+                "recognition_confidence": None,
+                "tokens": tokenize_line(content),
+            }
+        )
+        offset += len(part)
+    return lines
 
 
 def normalize_result(raw: dict[str, Any], model: str) -> dict[str, Any]:
@@ -22,14 +92,17 @@ def normalize_result(raw: dict[str, Any], model: str) -> dict[str, Any]:
     regions = []
     for source_index, block in enumerate(result.get("parsing_res_list", [])):
         order = block.get("block_order")
+        text = block.get("block_content")
         regions.append(
             {
                 "label": block.get("block_label"),
-                "text": block.get("block_content"),
+                "text": text,
                 "bbox": block.get("block_bbox"),
                 "polygon": block.get("block_polygon_points"),
-                "confidence": confidence_by_order.get(order),
+                "layout_confidence": confidence_by_order.get(order),
+                "recognition_confidence": None,
                 "order": order,
+                "lines": derive_lines(text),
                 "_source_index": source_index,
             }
         )
@@ -43,7 +116,7 @@ def normalize_result(raw: dict[str, Any], model: str) -> dict[str, Any]:
     for region in regions:
         del region["_source_index"]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "provider": "paddleocr-vl+lm-studio",
         "model": model,
         "coordinate_space": "image-pixels-ydown",

@@ -1,8 +1,12 @@
 # Adaptador PaddleOCR-VL + LM Studio
 
 Este adaptador usa o detector de layout do pipeline PaddleOCR-VL e delega o reconhecimento
-visual ao modelo `paddleocr-vl` carregado no LM Studio. A saída é JSON com texto e geometria;
-mensagens do fornecedor são enviadas para stderr.
+visual ao modelo `paddleocr-vl` carregado no LM Studio. A saída v2 é JSON com regiões, linhas,
+tokens e hipóteses tipográficas; mensagens do fornecedor são enviadas para stderr.
+
+O detector atual fornece geometria de região. Linhas e tokens derivados da transcrição são
+emitidos com geometria `null`, e a fonte fica `unknown`, até outro estágio apresentar evidência
+visual. Isso impede que a precisão aparente do formato seja maior que a do fornecedor.
 
 ## Preparação
 

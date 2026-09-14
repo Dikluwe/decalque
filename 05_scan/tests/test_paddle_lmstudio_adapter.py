@@ -48,7 +48,48 @@ class NormalizeResultTests(unittest.TestCase):
         self.assertEqual([region["order"] for region in output["regions"]], [1, 2])
         self.assertEqual(output["regions"][0]["text"], "Título")
         self.assertEqual(output["regions"][1]["bbox"], [68, 168, 836, 208])
-        self.assertEqual(output["regions"][1]["confidence"], 0.91)
+        self.assertEqual(output["regions"][1]["layout_confidence"], 0.91)
+        self.assertEqual(output["schema_version"], 2)
+
+    def test_explicit_lines_and_tokens_are_reversible_without_fabricated_geometry(self):
+        raw = {
+            "res": {
+                "width": 100,
+                "height": 200,
+                "parsing_res_list": [
+                    {
+                        "block_content": "Olá, mundo!\r\nSegunda linha\n",
+                        "block_bbox": [1, 2, 90, 40],
+                        "block_order": 1,
+                    }
+                ],
+            }
+        }
+
+        region = MODULE.normalize_result(raw, "modelo-local")["regions"][0]
+        lines = region["lines"]
+
+        self.assertEqual([line["break_after"] for line in lines], ["crlf", "lf"])
+        self.assertEqual("".join(token["text"] for token in lines[0]["tokens"]), "Olá, mundo!")
+        breaks = {"crlf": "\r\n", "lf": "\n", "cr": "\r", None: ""}
+        reconstructed = "".join(
+            "".join(token["text"] for token in line["tokens"])
+            + breaks[line["break_after"]]
+            for line in lines
+        )
+        self.assertEqual(reconstructed, region["text"])
+        self.assertEqual(lines[0]["tokens"][0]["span"], [0, 3])
+        self.assertTrue(all(line["bbox"] is None for line in lines))
+        self.assertTrue(
+            all(token["bbox"] is None for line in lines for token in line["tokens"])
+        )
+        self.assertTrue(
+            all(
+                token["font"] == MODULE.unknown_font()
+                for line in lines
+                for token in line["tokens"]
+            )
+        )
 
     def test_keeps_missing_confidence_absent_and_missing_order_stable(self):
         raw = {
@@ -71,7 +112,7 @@ class NormalizeResultTests(unittest.TestCase):
             ["ordenado", "sem ordem A", "sem ordem B"],
         )
         self.assertTrue(
-            all(region["confidence"] is None for region in output["regions"])
+            all(region["layout_confidence"] is None for region in output["regions"])
         )
         self.assertIsNone(output["page_index"])
 
