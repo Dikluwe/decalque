@@ -16,7 +16,16 @@ import candidate_raster_profile
 import scan_word_compare
 
 
-KINDS = ("serif", "sans", "mono", "bold", "italic", "condensed")
+KINDS = (
+    "serif", "vera-serif", "liberation-serif", "sans", "mono", "bold",
+    "italic", "condensed",
+)
+
+EXPECTED = {
+    "serif": "preserved",
+    # DejaVu Serif extends Bitstream Vera Serif; this Latin sample has identical ink.
+    "vera-serif": "preserved",
+}
 
 
 def degraded_images(image: Any) -> dict[str, Any]:
@@ -111,7 +120,7 @@ def run(binary: Path, fixture_directory: Path, width: int = 1276, height: int = 
                 detected = "violated" in statuses
                 cases.append({
                     "candidate": kind,
-                    "expected": "preserved" if kind == "serif" else "violated",
+                    "expected": EXPECTED.get(kind, "violated"),
                     "status": "violated" if detected else (
                         "preserved" if statuses and all(status == "preserved" for status in statuses)
                         else "unknown"
@@ -133,7 +142,7 @@ def run(binary: Path, fixture_directory: Path, width: int = 1276, height: int = 
                 catalogs["serif"], observed_image, width, height
             )
             cases = evaluate(observed_profiles)
-            mutations = [case for case in cases if case["candidate"] != "serif"]
+            mutations = [case for case in cases if case["expected"] == "violated"]
             rejected = sum(case["status"] == "violated" for case in mutations)
             observations.append({
                 "degradation": degradation,

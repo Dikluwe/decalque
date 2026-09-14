@@ -89,7 +89,8 @@ O perfil raster do candidato também pode ser executado isoladamente:
 python3 05_scan/candidate_raster_profile.py scan-profile.json candidate-fonts.json candidato.pdf > candidate-profile.json
 ```
 
-O corpus controlado de fontes difíceis compila e compara PDFs reais em serifada, sans e mono:
+O corpus controlado de fontes difíceis compila e compara PDFs reais, incluindo Liberation Serif
+como troca visualmente semelhante e Bitstream Vera Serif como controle de tinta idêntica:
 
 ```sh
 python3 05_scan/typography_corpus.py

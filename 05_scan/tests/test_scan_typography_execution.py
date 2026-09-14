@@ -22,7 +22,9 @@ class ScanTypographyExecutionTests(unittest.TestCase):
         self.assertEqual(report["mutation_score"], 1.0)
         self.assertEqual(
             [(case["candidate"], case["status"]) for case in report["cases"]],
-            [("serif", "preserved"), ("sans", "violated"), ("mono", "violated"),
+            [("serif", "preserved"), ("vera-serif", "preserved"),
+             ("liberation-serif", "violated"),
+             ("sans", "violated"), ("mono", "violated"),
              ("bold", "violated"), ("italic", "violated"), ("condensed", "violated")],
         )
         self.assertEqual(

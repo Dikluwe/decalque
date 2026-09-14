@@ -11,9 +11,12 @@ testemunha para mutação da forma da tinta. Não substituir `pdftocairo`, parsi
 serialização ou códigos de saída por chamadas internas.
 
 O corpus controlado usa a mesma frase, página e tamanho em DejaVu Serif como referência e troca
-somente a família para DejaVu Sans e DejaVu Sans Mono. O controle deve ser `preserved`; cada
-mutação é rejeitada quando ao menos uma palavra produz testemunha tipográfica `violated`. O gate
-exige `mutation_score = 1.0`.
+somente a família para Bitstream Vera Serif, Liberation Serif, DejaVu Sans e DejaVu Sans Mono.
+Bitstream Vera Serif é o controle de equivalência visual: seus glifos latinos desta amostra têm
+tinta idêntica e devem permanecer `preserved`, sem alegação de identidade nominal. Liberation
+Serif é o ataque de família visualmente semelhante, mas distinguível. Cada mutação observável é
+rejeitada quando ao menos uma palavra produz testemunha tipográfica `violated`. O gate exige
+`mutation_score = 1.0`.
 
 O segundo estrato mantém DejaVu Serif e altera isoladamente peso para negrito, estilo para
 itálico ou aplica escala horizontal de 75%. As três mutações também integram o denominador do
