@@ -17,3 +17,5 @@ Thumbs.db
 
 # Logs e temporários
 *.log
+__pycache__/
+*.py[cod]

@@ -99,6 +99,7 @@ decalque/
 ├── 02_shell/      # CLI
 ├── 03_infra/      # Leitura/parsing real de PDF (content stream, ToUnicode)
 ├── 04_wiring/     # main.rs, composição
+├── 05_scan/       # Adaptadores externos de geometria OCR para o Caso 2
 └── _lab/          # Experimentos isolados
 ```
 
@@ -113,3 +114,5 @@ revisão do motor de comparação também já estão materializados. `02_shell` 
 perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura. `04_wiring` liga
 `PageSource` ao pipeline de geometria, fontes, interpretação e diagnósticos. A CLI mínima
 do Caso 1 compara dois PDFs com `decalque <referencia.pdf> <candidato.pdf> [--page <indice>]`.
+O primeiro adaptador do Caso 2 combina o detector de layout do PaddleOCR-VL com o componente
+de reconhecimento servido localmente pelo LM Studio e emite regiões geométricas em JSON.
