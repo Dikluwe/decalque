@@ -77,7 +77,8 @@ Com a geometria em pontos, derive medidas conservadoras do envelope de tinta:
 python3 05_scan/typographic_profile.py scan-points.json > scan-profile.json
 ```
 
-O perfil registra altura-x apenas em palavras sem acentos compostas por letras de altura-x,
+O perfil registra densidade, centroide e projeções normalizadas da tinta, além de altura-x apenas
+em palavras sem acentos compostas por letras de altura-x,
 altura ascendente quando o texto contém ascendentes e profundidade descendente quando contém
 descendentes. Medidas sem sustentação ficam `null`; o nome da fonte candidata não é usado como
 prova visual.

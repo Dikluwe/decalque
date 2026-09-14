@@ -29,6 +29,15 @@ def segment(text, bbox, baseline=20, confidence=1.0, observed=None, candidate=No
 
 
 class ScanWordCompareTests(unittest.TestCase):
+    @staticmethod
+    def shape(density):
+        return {
+            "version": 1, "bins": 2, "density": density,
+            "centroid_x": 0.5, "centroid_y": 0.5,
+            "horizontal_projection": [density, density],
+            "vertical_projection": [density, density],
+        }
+
     def test_equal_horizontal_geometry_is_preserved_with_coverage(self):
         report = MODULE.compare(scan(segment("casa", [10, 5, 30, 15])), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
         self.assertEqual(report["words"][0]["status"], "preserved")
@@ -49,6 +58,24 @@ class ScanWordCompareTests(unittest.TestCase):
         word = report["words"][0]
         self.assertEqual(word["typography_status"], "violated")
         self.assertEqual(word["typographic_deltas_pt"]["ascender_height_pt"], 2)
+
+    def test_low_resolution_quantization_contributes_two_pixels_to_tolerance(self):
+        observed = {"status": "observed", "x_height_pt": 6.1}
+        candidate = {"status": "observed", "x_height_pt": 5.0}
+        source = scan(segment("casa", [10, 5, 30, 15], observed=observed, candidate=candidate))
+        source["point_transform"] = {"scale_y_pt_per_px": 0.6}
+        report = MODULE.compare(source, {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
+        word = report["words"][0]
+        self.assertEqual(word["typography_status"], "preserved")
+        self.assertAlmostEqual(word["typographic_tolerance_pt"], 1.2)
+
+    def test_shape_difference_detects_font_with_same_vertical_metrics(self):
+        observed = {"status": "observed", "x_height_pt": 5, "ink_shape": self.shape(0.2)}
+        candidate = {"status": "observed", "x_height_pt": 5, "ink_shape": self.shape(0.8)}
+        report = MODULE.compare(scan(segment("casa", [10, 5, 30, 15], observed=observed, candidate=candidate)), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
+        word = report["words"][0]
+        self.assertEqual(word["typography_status"], "violated")
+        self.assertGreater(word["typographic_shape_distance"], word["typographic_shape_tolerance"])
 
     def test_shift_beyond_tolerance_is_violated_with_witness(self):
         report = MODULE.compare(scan(segment("casa", [14, 5, 34, 15])), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})

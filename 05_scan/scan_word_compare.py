@@ -17,6 +17,26 @@ NORMALIZE = re.compile(r"\s+", re.UNICODE)
 TYPOGRAPHIC_MEASURES = ("x_height_pt", "ascender_height_pt", "descender_depth_pt")
 
 
+def shape_distance(first: Any, second: Any) -> float | None:
+    if not isinstance(first, dict) or not isinstance(second, dict):
+        return None
+    if first.get("version") != second.get("version") or first.get("bins") != second.get("bins"):
+        return None
+    fields = ("density", "centroid_x", "centroid_y")
+    vector_fields = ("horizontal_projection", "vertical_projection")
+    values: list[float] = []
+    for field in fields:
+        if not isinstance(first.get(field), (int, float)) or not isinstance(second.get(field), (int, float)):
+            return None
+        values.append(abs(first[field] - second[field]))
+    for field in vector_fields:
+        left, right = first.get(field), second.get(field)
+        if not isinstance(left, list) or not isinstance(right, list) or len(left) != len(right):
+            return None
+        values.extend(abs(a - b) for a, b in zip(left, right))
+    return sum(values) / len(values)
+
+
 def key(text: str | None) -> str:
     return NORMALIZE.sub("", text or "").casefold()
 
@@ -73,8 +93,9 @@ def candidate_words(glyphs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def compare(
     page: dict[str, Any], catalog: dict[str, Any], absolute_tolerance_pt: float = 1.5,
     relative_tolerance_em: float = 0.1, minimum_baseline_confidence: float = 0.5,
-    typographic_absolute_tolerance_pt: float = 0.75,
+    typographic_absolute_tolerance_pt: float = 1.0,
     typographic_relative_tolerance_em: float = 0.06,
+    typographic_shape_tolerance: float = 0.12,
 ) -> dict[str, Any]:
     candidates = candidate_words(catalog.get("glyphs", []))
     by_text: dict[str, list[dict[str, Any]]] = {}
@@ -128,14 +149,32 @@ def compare(
                     if isinstance(observed_profile.get(measure), (int, float))
                     and isinstance(candidate_profile.get(measure), (int, float))
                 }
+                scale_y = (page.get("point_transform") or {}).get("scale_y_pt_per_px")
+                quantization_tolerance = (
+                    2 * scale_y
+                    if isinstance(scale_y, (int, float))
+                    and not isinstance(scale_y, bool)
+                    and math.isfinite(scale_y)
+                    and scale_y > 0
+                    else 0.0
+                )
                 typographic_tolerance = max(
                     typographic_absolute_tolerance_pt,
                     typographic_relative_tolerance_em * candidate["font_size_pt"],
+                    quantization_tolerance,
                 )
-                if typographic_deltas:
+                visual_distance = shape_distance(
+                    observed_profile.get("ink_shape"), candidate_profile.get("ink_shape")
+                )
+                metric_violated = any(
+                    abs(delta) > typographic_tolerance for delta in typographic_deltas.values()
+                )
+                shape_violated = (
+                    visual_distance is not None and visual_distance > typographic_shape_tolerance
+                )
+                if typographic_deltas or visual_distance is not None:
                     typography_status = (
-                        "preserved" if all(abs(delta) <= typographic_tolerance for delta in typographic_deltas.values())
-                        else "violated"
+                        "violated" if metric_violated or shape_violated else "preserved"
                     )
                     typography_reason = None
                 else:
@@ -156,6 +195,9 @@ def compare(
                     "typography_reason": typography_reason,
                     "typographic_deltas_pt": typographic_deltas,
                     "typographic_tolerance_pt": typographic_tolerance,
+                    "typographic_quantization_tolerance_pt": quantization_tolerance,
+                    "typographic_shape_distance": visual_distance,
+                    "typographic_shape_tolerance": typographic_shape_tolerance,
                     "observed_typographic_profile": observed_profile or None,
                     "candidate_typographic_profile": candidate_profile or None,
                 })
@@ -181,8 +223,9 @@ def main() -> int:
     parser.add_argument("--absolute-tolerance-pt", type=float, default=1.5)
     parser.add_argument("--relative-tolerance-em", type=float, default=0.1)
     parser.add_argument("--minimum-baseline-confidence", type=float, default=0.5)
-    parser.add_argument("--typographic-absolute-tolerance-pt", type=float, default=0.75)
+    parser.add_argument("--typographic-absolute-tolerance-pt", type=float, default=1.0)
     parser.add_argument("--typographic-relative-tolerance-em", type=float, default=0.06)
+    parser.add_argument("--typographic-shape-tolerance", type=float, default=0.12)
     args = parser.parse_args()
     try:
         pages = json.loads(args.scan_json.read_text(encoding="utf-8"))
@@ -192,7 +235,7 @@ def main() -> int:
         json.dump(compare(
             pages[0], catalog, args.absolute_tolerance_pt, args.relative_tolerance_em,
             args.minimum_baseline_confidence, args.typographic_absolute_tolerance_pt,
-            args.typographic_relative_tolerance_em,
+            args.typographic_relative_tolerance_em, args.typographic_shape_tolerance,
         ), sys.stdout, ensure_ascii=False, separators=(",", ":"))
         sys.stdout.write("\n")
         return 0

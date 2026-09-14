@@ -36,7 +36,7 @@ def render_page(
         return image
 
 
-def ink_bbox(image: Any, bounds: list[int]) -> list[int] | None:
+def ink_observation(image: Any, bounds: list[int]) -> tuple[list[int], list[list[bool]]] | None:
     import numpy as np
 
     x0, y0, x1, y1 = bounds
@@ -67,7 +67,15 @@ def ink_bbox(image: Any, bounds: list[int]) -> list[int] | None:
     ys, xs = (gray <= threshold).nonzero()
     if len(xs) == 0:
         return None
-    return [x0 + int(xs.min()), y0 + int(ys.min()), x0 + int(xs.max()) + 1, y0 + int(ys.max()) + 1]
+    local_x0, local_y0 = int(xs.min()), int(ys.min())
+    local_x1, local_y1 = int(xs.max()) + 1, int(ys.max()) + 1
+    bbox = [x0 + local_x0, y0 + local_y0, x0 + local_x1, y0 + local_y1]
+    return bbox, (gray[local_y0:local_y1, local_x0:local_x1] <= threshold).tolist()
+
+
+def ink_bbox(image: Any, bounds: list[int]) -> list[int] | None:
+    observation = ink_observation(image, bounds)
+    return observation[0] if observation else None
 
 
 def candidate_profiles(
@@ -101,15 +109,17 @@ def candidate_profiles(
             min(width, math.ceil(word["x1"] * sx)),
             min(height, math.ceil(bottom)),
         ]
-        bbox = ink_bbox(image, bounds)
-        if bbox is None:
+        observation = ink_observation(image, bounds)
+        if observation is None:
             profile = {"status": "unknown", "reason": "candidate-ink-absent"}
         else:
+            bbox, ink = observation
             segment = {
                 "text": word["text"], "bbox": bbox,
                 "bbox_pt": [bbox[0] / sx, bbox[1] / sy, bbox[2] / sx, bbox[3] / sy],
                 "baseline_y_px": baseline_px, "baseline_y_pt": word["baseline_y"],
                 "baseline_confidence": 1.0,
+                "ink_shape": typographic_profile.ink_shape_descriptor(ink),
             }
             profile = typographic_profile.profile_for_segment(segment)
         profiles.setdefault(scan_word_compare.key(word["text"]), []).append(profile)

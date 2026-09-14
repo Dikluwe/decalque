@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import typographic_profile
+
 
 WORDS = re.compile(r"\S+", re.UNICODE)
 
@@ -142,6 +144,13 @@ def attach_word_geometry(
                 segment["baseline_y_px"] = baseline
                 segment["baseline_confidence"] = confidence
                 segment["baseline_source"] = "dominant-column-ink-bottom"
+                local_x0 = segment["bbox"][0] - x0
+                local_y0 = segment["bbox"][1] - y0
+                local_x1 = segment["bbox"][2] - x0
+                local_y1 = segment["bbox"][3] - y0
+                segment["ink_shape"] = typographic_profile.ink_shape_descriptor(
+                    [row[local_x0:local_x1] for row in ink_rows[local_y0:local_y1]]
+                )
 
         segments = [
             segment

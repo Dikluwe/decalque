@@ -1,9 +1,11 @@
 import importlib.util
 import pathlib
+import sys
 import unittest
 
 
 MODULE_PATH = pathlib.Path(__file__).parents[1] / "word_geometry_detector.py"
+sys.path.insert(0, str(MODULE_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("word_geometry_detector", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)

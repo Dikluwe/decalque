@@ -23,6 +23,15 @@ homóloga é obrigatória: deltas dentro da tolerância são `preserved`, fora d
 sem medida homóloga o resultado tipográfico é `unknown`. Esse veredito cobre o perfil medido,
 não identidade absoluta da família da fonte.
 
+Além das métricas verticais, cada envelope pode registrar descritor normalizado da forma da
+tinta: densidade, centroide e projeções em oito faixas horizontais e verticais. Descritores de
+mesma versão e dimensão produzem uma distância visual separada. Distância acima do limiar viola
+o perfil mesmo quando altura-x, ascendentes e descendentes coincidem.
+
+Os defaults são 1 pt para medidas verticais e 0,12 para a distância normalizada. A tolerância
+vertical também deve cobrir dois pixels na escala observada, representando a quantização das duas
+bordas comparadas. Os limiares e a contribuição de quantização permanecem explícitos no relatório.
+
 ## Observáveis
 
 - envelope, baseline e confiança usados permanecem disponíveis;

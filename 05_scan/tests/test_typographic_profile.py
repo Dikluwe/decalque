@@ -21,6 +21,21 @@ def segment(text, baseline=20, confidence=1.0):
 
 
 class TypographicProfileTests(unittest.TestCase):
+    def test_shape_descriptor_is_normalized_and_deterministic(self):
+        ink = [
+            [True, False, False, False],
+            [True, True, False, False],
+            [False, True, False, False],
+            [False, True, True, True],
+        ]
+        first = MODULE.ink_shape_descriptor(ink, bins=2)
+        self.assertEqual(first, MODULE.ink_shape_descriptor(ink, bins=2))
+        self.assertEqual(first["density"], 7 / 16)
+        self.assertEqual(len(first["horizontal_projection"]), 2)
+
+    def test_shape_descriptor_without_ink_is_unknown(self):
+        self.assertIsNone(MODULE.ink_shape_descriptor([[False, False]]))
+
     def test_x_height_only_word_exposes_x_height_without_other_claims(self):
         profile = MODULE.profile_for_segment(segment("casa"))
         self.assertEqual(profile["status"], "observed")

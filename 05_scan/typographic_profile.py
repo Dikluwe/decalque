@@ -18,6 +18,37 @@ ASCENDER_LETTERS = frozenset("bdfhklt")
 DESCENDER_LETTERS = frozenset("gjpqy")
 
 
+def ink_shape_descriptor(
+    ink: list[list[bool]], bins: int = 8
+) -> dict[str, Any] | None:
+    if not ink or not ink[0] or bins < 1:
+        return None
+    height, width = len(ink), len(ink[0])
+    points = [(x, y) for y, row in enumerate(ink) for x, value in enumerate(row) if value]
+    if not points:
+        return None
+
+    def projection(axis: int, extent: int, other_extent: int) -> list[float]:
+        values = []
+        for index in range(bins):
+            start = index * extent // bins
+            end = (index + 1) * extent // bins
+            area = max(1, (end - start) * other_extent)
+            count = sum(start <= point[axis] < end for point in points)
+            values.append(count / area)
+        return values
+
+    return {
+        "version": 1,
+        "bins": bins,
+        "density": len(points) / (width * height),
+        "centroid_x": sum(x + 0.5 for x, _ in points) / len(points) / width,
+        "centroid_y": sum(y + 0.5 for _, y in points) / len(points) / height,
+        "horizontal_projection": projection(1, height, width),
+        "vertical_projection": projection(0, width, height),
+    }
+
+
 def finite_number(value: Any) -> bool:
     return (
         isinstance(value, (int, float))
@@ -78,6 +109,7 @@ def profile_for_segment(
         "source": "word-ink-envelope",
         "confidence": confidence,
         "features": features,
+        "ink_shape": segment.get("ink_shape"),
         "ink_height_px": bottom_px - top_px,
         "ink_height_pt": bottom_pt - top_pt,
         "x_height_px": None,
