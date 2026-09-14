@@ -108,6 +108,61 @@ fn pdf_criptografado_e_reportado_como_erro_de_leitura() {
     assert!(error.contains("PDF criptografado"));
 }
 
+#[test]
+fn pagina_sem_texto_exibe_metricas_indisponiveis() {
+    let scan = fixture("scan.pdf");
+    let output = run(&[scan.as_os_str(), scan.as_os_str()]);
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    let report = stdout(&output);
+    assert!(report.contains("pares: 0\n"));
+    assert!(report.contains("cobertura: A=0/0 B=0/0"));
+    assert!(report.contains("mediana |dx|: n/a pt"));
+    assert!(report.contains("máximo |dy|: n/a pt"));
+    assert!(!report.contains("mediana |dx|: 0.000 pt"));
+}
+
+#[test]
+fn documentos_divergentes_continuam_sendo_medicao_bem_sucedida() {
+    let reference = fixture("textops.pdf");
+    let candidate = fixture("typst.pdf");
+    let output = run(&[reference.as_os_str(), candidate.as_os_str()]);
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert!(stderr(&output).is_empty());
+    let report = stdout(&output);
+    assert!(report.contains("não emparelhados: A=10 B=211"));
+    assert!(report.contains("cobertura: A=0/10 B=0/211"));
+}
+
+#[test]
+fn indice_de_pagina_nao_numerico_e_erro_de_uso() {
+    let pdf = fixture("textops.pdf");
+    let output = run(&[
+        pdf.as_os_str(),
+        pdf.as_os_str(),
+        "--page".as_ref(),
+        "não-é-número".as_ref(),
+    ]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.starts_with("erro: índice de página inválido"));
+    assert!(error.contains("uso: decalque"));
+}
+
+#[test]
+fn falha_no_segundo_pdf_identifica_o_candidato() {
+    let reference = fixture("textops.pdf");
+    let missing = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("arquivo-ausente.pdf");
+    let output = run(&[reference.as_os_str(), missing.as_os_str()]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).starts_with("erro: candidato: erro de leitura"));
+}
+
 #[cfg(unix)]
 #[test]
 fn caminho_nao_utf8_chega_ao_carregador_sem_virar_erro_de_uso() {
