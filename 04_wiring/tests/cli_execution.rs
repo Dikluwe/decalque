@@ -26,6 +26,14 @@ fn run(args: &[&std::ffi::OsStr]) -> Output {
         .expect("o binário decalque deve iniciar")
 }
 
+fn run_from(current_dir: &std::path::Path, args: &[&std::ffi::OsStr]) -> Output {
+    Command::new(binary())
+        .current_dir(current_dir)
+        .args(args)
+        .output()
+        .expect("o binário decalque deve iniciar")
+}
+
 fn stdout(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).expect("stdout deve ser UTF-8")
 }
@@ -161,6 +169,122 @@ fn falha_no_segundo_pdf_identifica_o_candidato() {
     assert_eq!(output.status.code(), Some(2));
     assert!(stdout(&output).is_empty());
     assert!(stderr(&output).starts_with("erro: candidato: erro de leitura"));
+}
+
+#[test]
+fn pagina_zero_explicita_equivale_ao_default() {
+    let pdf = fixture("textops.pdf");
+    let default = run(&[pdf.as_os_str(), pdf.as_os_str()]);
+    let explicit = run(&[
+        pdf.as_os_str(),
+        pdf.as_os_str(),
+        "--page".as_ref(),
+        "0".as_ref(),
+    ]);
+
+    assert!(default.status.success());
+    assert!(explicit.status.success());
+    assert_eq!(explicit.stdout, default.stdout);
+    assert_eq!(explicit.stderr, default.stderr);
+}
+
+#[test]
+fn pdf_com_xref_stream_e_processado_pelo_executavel() {
+    let pdf = fixture("typst_xrefstream.pdf");
+    let output = run(&[
+        pdf.as_os_str(),
+        pdf.as_os_str(),
+        "--page".as_ref(),
+        "0".as_ref(),
+    ]);
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    let report = stdout(&output);
+    assert!(report.contains("pares: 211"));
+    assert!(report.contains("cobertura: A=211/211 B=211/211"));
+    assert!(report.contains("máximo |dx|: 0.000 pt"));
+}
+
+#[test]
+fn opcao_desconhecida_e_rejeitada_na_fronteira_do_processo() {
+    let pdf = fixture("textops.pdf");
+    let output = run(&[
+        pdf.as_os_str(),
+        pdf.as_os_str(),
+        "--unknown".as_ref(),
+        "1".as_ref(),
+    ]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.starts_with("erro: opção desconhecida: --unknown"));
+    assert!(error.contains("uso: decalque"));
+}
+
+#[test]
+fn argumentos_excedentes_sao_rejeitados() {
+    let output = run(&["a.pdf".as_ref(), "b.pdf".as_ref(), "c.pdf".as_ref()]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).contains("esperados dois caminhos"));
+}
+
+#[test]
+fn arquivo_que_nao_e_pdf_e_erro_de_parse_da_referencia() {
+    let invalid = fixture("SOURCES.md");
+    let candidate = fixture("textops.pdf");
+    let output = run(&[invalid.as_os_str(), candidate.as_os_str()]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.starts_with("erro: referência: estrutura de PDF inválida:"));
+    assert!(error.contains("invalid file header"));
+}
+
+#[test]
+fn executavel_nao_depende_do_diretorio_de_trabalho() {
+    let pdf = fixture("textops.pdf")
+        .canonicalize()
+        .expect("fixture deve existir");
+    let output = run_from(
+        std::env::temp_dir().as_path(),
+        &[pdf.as_os_str(), pdf.as_os_str()],
+    );
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert!(stdout(&output).contains("cobertura: A=10/10 B=10/10"));
+    assert!(stderr(&output).is_empty());
+}
+
+#[test]
+fn page_sem_valor_e_erro_de_uso() {
+    let pdf = fixture("textops.pdf");
+    let output = run(&[pdf.as_os_str(), pdf.as_os_str(), "--page".as_ref()]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.starts_with("erro: esperados dois caminhos"));
+    assert!(error.contains("uso: decalque"));
+}
+
+#[test]
+fn indice_negativo_e_rejeitado_antes_de_ler_arquivos() {
+    let output = run(&[
+        "arquivo-que-não-existe-a.pdf".as_ref(),
+        "arquivo-que-não-existe-b.pdf".as_ref(),
+        "--page".as_ref(),
+        "-1".as_ref(),
+    ]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stdout(&output).is_empty());
+    let error = stderr(&output);
+    assert!(error.starts_with("erro: índice de página inválido"));
+    assert!(!error.contains("erro de leitura"));
 }
 
 #[cfg(unix)]
