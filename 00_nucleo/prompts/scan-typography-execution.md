@@ -21,10 +21,11 @@ itálico ou aplica escala horizontal de 75%. As três mutações também integra
 
 ## Robustez do scan
 
-Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px e ruído
-gaussiano determinístico de desvio 4. Cada controle degradado deve continuar `preserved` e cada
-estrato deve manter `mutation_score = 1.0`. Degradação que elimine evidência produz `unknown`,
-nunca preservação implícita.
+Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px, ruído
+gaussiano determinístico de desvio 4, compressão JPEG com qualidade 45 e rotação de 0,35 grau.
+Cada controle degradado deve continuar `preserved` e cada estrato deve manter
+`mutation_score = 1.0`. Degradação que elimine evidência produz `unknown`, nunca preservação
+implícita.
 
 ## Vereditos
 

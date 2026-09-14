@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import subprocess
 import sys
@@ -28,6 +29,13 @@ def degraded_images(image: Any) -> dict[str, Any]:
         (width // 2, height // 2), Image.Resampling.LANCZOS
     ).resize((width, height), Image.Resampling.BILINEAR)
     blurred = rgb.filter(ImageFilter.GaussianBlur(radius=0.8))
+    jpeg_buffer = io.BytesIO()
+    rgb.save(jpeg_buffer, format="JPEG", quality=45)
+    jpeg_buffer.seek(0)
+    jpeg = Image.open(jpeg_buffer).convert("RGB")
+    rotated = rgb.rotate(
+        0.35, resample=Image.Resampling.BICUBIC, expand=False, fillcolor="white"
+    )
     generator = np.random.default_rng(20260914)
     noisy = np.clip(
         np.asarray(rgb, dtype=np.int16)
@@ -39,6 +47,8 @@ def degraded_images(image: Any) -> dict[str, Any]:
         "low-resolution": np.asarray(low_resolution)[:, :, ::-1].copy(),
         "blur": np.asarray(blurred)[:, :, ::-1].copy(),
         "noise": noisy[:, :, ::-1].copy(),
+        "jpeg": np.asarray(jpeg)[:, :, ::-1].copy(),
+        "rotation-0.35deg": np.asarray(rotated)[:, :, ::-1].copy(),
     }
 
 

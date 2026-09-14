@@ -31,7 +31,9 @@ class ScanTypographyExecutionTests(unittest.TestCase):
             [("pristine", "preserved", 1.0),
              ("low-resolution", "preserved", 1.0),
              ("blur", "preserved", 1.0),
-             ("noise", "preserved", 1.0)],
+             ("noise", "preserved", 1.0),
+             ("jpeg", "preserved", 1.0),
+             ("rotation-0.35deg", "preserved", 1.0)],
         )
 
     def run_with_json(self, script, values, *arguments):

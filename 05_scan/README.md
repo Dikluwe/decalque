@@ -96,7 +96,8 @@ python3 05_scan/typography_corpus.py
 ```
 
 O JSON resultante inclui os vereditos por palavra e o `mutation_score` das trocas de família,
-peso, estilo e largura, tanto na referência limpa quanto sob baixa resolução, blur e ruído.
+peso, estilo e largura, tanto na referência limpa quanto sob baixa resolução, blur, ruído,
+compressão JPEG e rotação leve.
 
 ## Evidência de fonte do PDF candidato
 
