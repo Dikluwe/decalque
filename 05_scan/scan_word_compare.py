@@ -34,7 +34,21 @@ def shape_distance(first: Any, second: Any) -> float | None:
         if not isinstance(left, list) or not isinstance(right, list) or len(left) != len(right):
             return None
         values.extend(abs(a - b) for a, b in zip(left, right))
-    return sum(values) / len(values)
+    distances = [sum(values) / len(values)]
+    left_occupancy, right_occupancy = first.get("occupancy"), second.get("occupancy")
+    if (
+        first.get("occupancy_rows") == second.get("occupancy_rows")
+        and first.get("occupancy_columns") == second.get("occupancy_columns")
+        and isinstance(left_occupancy, list)
+        and isinstance(right_occupancy, list)
+        and left_occupancy
+        and len(left_occupancy) == len(right_occupancy)
+    ):
+        distances.append(
+            sum(abs(a - b) for a, b in zip(left_occupancy, right_occupancy))
+            / len(left_occupancy)
+        )
+    return max(distances)
 
 
 def key(text: str | None) -> str:

@@ -12,6 +12,19 @@ FIXTURE = ROOT / "03_infra" / "tests" / "fixtures" / "typst.pdf"
 
 
 class ScanTypographyExecutionTests(unittest.TestCase):
+    def test_difficult_font_corpus_rejects_all_controlled_mutations(self):
+        result = subprocess.run(
+            [sys.executable, str(SCAN / "typography_corpus.py")],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["mutation_score"], 1.0)
+        self.assertEqual(
+            [(case["candidate"], case["status"]) for case in report["cases"]],
+            [("serif", "preserved"), ("sans", "violated"), ("mono", "violated")],
+        )
+
     def run_with_json(self, script, values, *arguments):
         with tempfile.TemporaryDirectory() as directory:
             paths = []

@@ -32,6 +32,7 @@ class TypographicProfileTests(unittest.TestCase):
         self.assertEqual(first, MODULE.ink_shape_descriptor(ink, bins=2))
         self.assertEqual(first["density"], 7 / 16)
         self.assertEqual(len(first["horizontal_projection"]), 2)
+        self.assertEqual(len(first["occupancy"]), 8 * 16)
 
     def test_shape_descriptor_without_ink_is_unknown(self):
         self.assertIsNone(MODULE.ink_shape_descriptor([[False, False]]))

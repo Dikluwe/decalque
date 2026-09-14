@@ -89,6 +89,14 @@ O perfil raster do candidato também pode ser executado isoladamente:
 python3 05_scan/candidate_raster_profile.py scan-profile.json candidate-fonts.json candidato.pdf > candidate-profile.json
 ```
 
+O corpus controlado de fontes difíceis compila e compara PDFs reais em serifada, sans e mono:
+
+```sh
+python3 05_scan/typography_corpus.py
+```
+
+O JSON resultante inclui os vereditos por palavra e o `mutation_score` das trocas de família.
+
 ## Evidência de fonte do PDF candidato
 
 Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF

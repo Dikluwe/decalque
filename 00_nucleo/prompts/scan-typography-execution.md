@@ -10,6 +10,11 @@ cobrir rasterização bem-sucedida de uma fixture real, falha explícita do rend
 testemunha para mutação da forma da tinta. Não substituir `pdftocairo`, parsing de argumentos,
 serialização ou códigos de saída por chamadas internas.
 
+O corpus controlado usa a mesma frase, página e tamanho em DejaVu Serif como referência e troca
+somente a família para DejaVu Sans e DejaVu Sans Mono. O controle deve ser `preserved`; cada
+mutação é rejeitada quando ao menos uma palavra produz testemunha tipográfica `violated`. O gate
+exige `mutation_score = 1.0`.
+
 ## Vereditos
 
 - execução válida termina com código 0 e JSON parseável em stdout;

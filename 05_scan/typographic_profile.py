@@ -38,6 +38,15 @@ def ink_shape_descriptor(
             values.append(count / area)
         return values
 
+    occupancy = []
+    for row in range(8):
+        y0, y1 = row * height // 8, (row + 1) * height // 8
+        for column in range(16):
+            x0, x1 = column * width // 16, (column + 1) * width // 16
+            area = max(1, (y1 - y0) * (x1 - x0))
+            count = sum(x0 <= x < x1 and y0 <= y < y1 for x, y in points)
+            occupancy.append(count / area)
+
     return {
         "version": 1,
         "bins": bins,
@@ -46,6 +55,9 @@ def ink_shape_descriptor(
         "centroid_y": sum(y + 0.5 for _, y in points) / len(points) / height,
         "horizontal_projection": projection(1, height, width),
         "vertical_projection": projection(0, width, height),
+        "occupancy_rows": 8,
+        "occupancy_columns": 16,
+        "occupancy": occupancy,
     }
 
 

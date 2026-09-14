@@ -24,7 +24,7 @@ sem medida homóloga o resultado tipográfico é `unknown`. Esse veredito cobre 
 não identidade absoluta da família da fonte.
 
 Além das métricas verticais, cada envelope pode registrar descritor normalizado da forma da
-tinta: densidade, centroide e projeções em oito faixas horizontais e verticais. Descritores de
+tinta: densidade, centroide, projeções em oito faixas e grade de ocupação 8×16. Descritores de
 mesma versão e dimensão produzem uma distância visual separada. Distância acima do limiar viola
 o perfil mesmo quando altura-x, ascendentes e descendentes coincidem.
 
