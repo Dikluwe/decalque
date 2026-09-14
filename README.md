@@ -104,10 +104,10 @@ decalque/
 
 ## Estado actual
 
-`PageGeometry`, o modelo de fontes, o parser `ToUnicode`/CMap, `PdfError` e
-`normalize_to_top_left` já refletem as especificações activas de `01_core`.
+`PageGeometry`, o modelo de fontes, o parser `ToUnicode`/CMap, `PdfError`,
+`normalize_to_top_left` e o intérprete de content stream já refletem as
+especificações activas de `01_core`.
 `CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
-consome a origem da caixa efectiva. O próximo passo é materializar
-`content-stream-text-model.md` (`GlyphInstance`, operações e intérprete), seguido de
-`03_infra` (adaptador lopdf), diagnósticos/`DocumentGeometry`, `02_shell` (CLI) e
-`04_wiring`.
+consome a origem da caixa efectiva. O próximo passo é materializar `03_infra`
+(adaptador lopdf), seguido de diagnósticos/`DocumentGeometry`, revisão do motor,
+`02_shell` (CLI) e `04_wiring`.

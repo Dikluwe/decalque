@@ -376,13 +376,23 @@ mod tests {
     use super::*;
     use crate::entities::PageRotation;
     use crate::entities::PageGeometry;
+    use crate::entities::TextMappingStatus;
 
     fn glifo(x: f64, y: f64, codepoints: Option<Vec<char>>) -> GlyphInstance {
+        let mapping_status = if codepoints.is_some() {
+            TextMappingStatus::Mapped
+        } else {
+            TextMappingStatus::Unmapped
+        };
         GlyphInstance {
+            glyph_code: 0,
             position: (x, y),
             codepoints,
+            advance: 6.0,
             font_size_pt: 12.0,
             font_ref: "F1".to_string(),
+            mapping_status,
+            render_mode: 0,
         }
     }
 

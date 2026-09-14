@@ -6,7 +6,7 @@ pub mod measurement_resolution;
 pub mod page_geometry;
 pub mod pdf_error;
 
-pub use glyph_instance::{DocumentGeometry, GlyphInstance};
+pub use glyph_instance::{DocumentGeometry, GlyphInstance, TextMappingStatus};
 pub use measurement_resolution::MeasurementResolution;
 pub use page_geometry::{
     display_size, resolve_page_geometry, PageBoxModel, PageGeometry, PageGeometryDiagnostic,
