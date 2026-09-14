@@ -19,6 +19,13 @@ O segundo estrato mantém DejaVu Serif e altera isoladamente peso para negrito, 
 itálico ou aplica escala horizontal de 75%. As três mutações também integram o denominador do
 `mutation_score`.
 
+## Robustez do scan
+
+Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px e ruído
+gaussiano determinístico de desvio 4. Cada controle degradado deve continuar `preserved` e cada
+estrato deve manter `mutation_score = 1.0`. Degradação que elimine evidência produz `unknown`,
+nunca preservação implícita.
+
 ## Vereditos
 
 - execução válida termina com código 0 e JSON parseável em stdout;

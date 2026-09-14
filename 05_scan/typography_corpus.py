@@ -18,6 +18,30 @@ import scan_word_compare
 KINDS = ("serif", "sans", "mono", "bold", "italic", "condensed")
 
 
+def degraded_images(image: Any) -> dict[str, Any]:
+    import numpy as np
+    from PIL import Image, ImageFilter
+
+    rgb = Image.fromarray(image[:, :, ::-1])
+    width, height = rgb.size
+    low_resolution = rgb.resize(
+        (width // 2, height // 2), Image.Resampling.LANCZOS
+    ).resize((width, height), Image.Resampling.BILINEAR)
+    blurred = rgb.filter(ImageFilter.GaussianBlur(radius=0.8))
+    generator = np.random.default_rng(20260914)
+    noisy = np.clip(
+        np.asarray(rgb, dtype=np.int16)
+        + generator.normal(0, 4, (height, width, 1)).round().astype(np.int16),
+        0, 255,
+    ).astype(np.uint8)
+    return {
+        "pristine": image,
+        "low-resolution": np.asarray(low_resolution)[:, :, ::-1].copy(),
+        "blur": np.asarray(blurred)[:, :, ::-1].copy(),
+        "noise": noisy[:, :, ::-1].copy(),
+    }
+
+
 def catalog(binary: Path, pdf: Path) -> dict[str, Any]:
     process = subprocess.run(
         [str(binary), str(pdf), "--page", "0"], capture_output=True, text=True,
@@ -40,61 +64,81 @@ def compile_fixture(source: Path, output: Path) -> None:
 def run(binary: Path, fixture_directory: Path, width: int = 1276, height: int = 425) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="decalque-font-corpus-") as directory:
         temporary = Path(directory)
-        catalogs, profiles = {}, {}
+        catalogs, images, profiles = {}, {}, {}
         for kind in KINDS:
             pdf = temporary / f"{kind}.pdf"
             compile_fixture(fixture_directory / f"typography-{kind}.typ", pdf)
             catalogs[kind] = catalog(binary, pdf)
             image = candidate_raster_profile.render_page(pdf, 0, width, height)
+            images[kind] = image
             profiles[kind] = candidate_raster_profile.candidate_profiles(
                 catalogs[kind], image, width, height
             )
 
         reference_words = scan_word_compare.candidate_words(catalogs["serif"]["glyphs"])
-        cases = []
-        for kind in KINDS:
-            segments = []
-            for word in reference_words:
-                word_key = scan_word_compare.key(word["text"])
-                segments.append({
-                    "text": word["text"],
-                    "bbox_pt": [word["x0"], word["baseline_y"] - word["font_size_pt"], word["x1"], word["baseline_y"]],
-                    "baseline_y_pt": word["baseline_y"], "baseline_confidence": 1.0,
-                    "typographic_profile": profiles["serif"][word_key][0],
-                    "candidate_typographic_profile": profiles[kind][word_key][0],
+
+        def evaluate(observed_profiles: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
+            cases = []
+            for kind in KINDS:
+                segments = []
+                for word in reference_words:
+                    word_key = scan_word_compare.key(word["text"])
+                    segments.append({
+                        "text": word["text"],
+                        "bbox_pt": [word["x0"], word["baseline_y"] - word["font_size_pt"], word["x1"], word["baseline_y"]],
+                        "baseline_y_pt": word["baseline_y"], "baseline_confidence": 1.0,
+                        "typographic_profile": observed_profiles[word_key][0],
+                        "candidate_typographic_profile": profiles[kind][word_key][0],
+                    })
+                page = {
+                    "point_transform": {
+                        "scale_y_pt_per_px": catalogs["serif"]["page"]["height_pt"] / height
+                    },
+                    "regions": [{"detected_lines": [{"id": 0, "word_segments": segments}]}],
+                }
+                comparison = scan_word_compare.compare(page, catalogs[kind])
+                statuses = [word["typography_status"] for word in comparison["words"]]
+                detected = "violated" in statuses
+                cases.append({
+                    "candidate": kind,
+                    "expected": "preserved" if kind == "serif" else "violated",
+                    "status": "violated" if detected else (
+                        "preserved" if statuses and all(status == "preserved" for status in statuses)
+                        else "unknown"
+                    ),
+                    "words": [
+                        {
+                            "text": word["word"],
+                            "status": word["typography_status"],
+                            "shape_distance": word["typographic_shape_distance"],
+                        }
+                        for word in comparison["words"]
+                    ],
                 })
-            page = {
-                "point_transform": {
-                    "scale_y_pt_per_px": catalogs["serif"]["page"]["height_pt"] / height
-                },
-                "regions": [{"detected_lines": [{"id": 0, "word_segments": segments}]}],
-            }
-            comparison = scan_word_compare.compare(page, catalogs[kind])
-            statuses = [word["typography_status"] for word in comparison["words"]]
-            detected = "violated" in statuses
-            cases.append({
-                "candidate": kind,
-                "expected": "preserved" if kind == "serif" else "violated",
-                "status": "violated" if detected else (
-                    "preserved" if statuses and all(status == "preserved" for status in statuses)
-                    else "unknown"
-                ),
-                "words": [
-                    {
-                        "text": word["word"],
-                        "status": word["typography_status"],
-                        "shape_distance": word["typographic_shape_distance"],
-                    }
-                    for word in comparison["words"]
-                ],
+            return cases
+
+        observations = []
+        for degradation, observed_image in degraded_images(images["serif"]).items():
+            observed_profiles = candidate_raster_profile.candidate_profiles(
+                catalogs["serif"], observed_image, width, height
+            )
+            cases = evaluate(observed_profiles)
+            mutations = [case for case in cases if case["candidate"] != "serif"]
+            rejected = sum(case["status"] == "violated" for case in mutations)
+            observations.append({
+                "degradation": degradation,
+                "control_status": cases[0]["status"],
+                "mutation_score": rejected / len(mutations),
+                "cases": cases,
             })
-        mutations = [case for case in cases if case["candidate"] != "serif"]
-        rejected = sum(case["status"] == "violated" for case in mutations)
+
+        pristine = observations[0]
         return {
-            "schema_version": 1,
+            "schema_version": 2,
             "reference": "serif",
-            "cases": cases,
-            "mutation_score": rejected / len(mutations),
+            "cases": pristine["cases"],
+            "mutation_score": pristine["mutation_score"],
+            "degradations": observations,
         }
 
 

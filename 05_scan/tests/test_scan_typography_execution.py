@@ -25,6 +25,14 @@ class ScanTypographyExecutionTests(unittest.TestCase):
             [("serif", "preserved"), ("sans", "violated"), ("mono", "violated"),
              ("bold", "violated"), ("italic", "violated"), ("condensed", "violated")],
         )
+        self.assertEqual(
+            [(item["degradation"], item["control_status"], item["mutation_score"])
+             for item in report["degradations"]],
+            [("pristine", "preserved", 1.0),
+             ("low-resolution", "preserved", 1.0),
+             ("blur", "preserved", 1.0),
+             ("noise", "preserved", 1.0)],
+        )
 
     def run_with_json(self, script, values, *arguments):
         with tempfile.TemporaryDirectory() as directory:
