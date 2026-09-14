@@ -292,6 +292,9 @@ fn tokenizar(bytes: &[u8]) -> Vec<Token> {
         let b = bytes[i];
         if e_espaco(b) {
             i += 1;
+        } else if b == b'<' && bytes.get(i + 1) == Some(&b'<') {
+            // Delimitador de dicionário PDF: prosa estrutural do CMap, não hex.
+            i += 2;
         } else if b == b'<' {
             let inicio = i + 1;
             match bytes[inicio..].iter().position(|&c| c == b'>') {
@@ -311,6 +314,10 @@ fn tokenizar(bytes: &[u8]) -> Vec<Token> {
             i += 1;
         } else if b == b']' {
             tokens.push(Token::FechaArray);
+            i += 1;
+        } else if b"{}>".contains(&b) {
+            // Delimitadores estruturais não têm semântica nas secções
+            // suportadas. O avanço explícito evita laço em entrada real.
             i += 1;
         } else {
             let inicio = i;
@@ -636,6 +643,15 @@ mod tests {
             "diagnósticos: {:?}",
             r.diagnostics
         );
+    }
+
+    #[test]
+    fn delimitadores_estruturais_nao_sao_hex_nem_travam_o_tokenizador() {
+        let r = parse(
+            "<< /Metadata { ignored } >> 1 beginbfchar <0001> <0041> endbfchar",
+        );
+        assert_eq!(r.mapping.lookup(0x0001), Some(vec!['A']));
+        assert!(r.diagnostics.is_empty(), "diagnósticos: {:?}", r.diagnostics);
     }
 
     #[test]

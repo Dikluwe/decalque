@@ -374,6 +374,7 @@ fn mediana(valores: &mut [f64]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entities::PageRotation;
     use crate::entities::PageGeometry;
 
     fn glifo(x: f64, y: f64, codepoints: Option<Vec<char>>) -> GlyphInstance {
@@ -387,7 +388,13 @@ mod tests {
 
     fn doc(glyphs: Vec<GlyphInstance>) -> DocumentGeometry {
         DocumentGeometry {
-            page: PageGeometry { width: 595.0, height: 842.0 },
+            page: PageGeometry {
+                width: 595.0,
+                height: 842.0,
+                origin: (0.0, 0.0),
+                rotation: PageRotation::Deg0,
+                user_unit: 1.0,
+            },
             glyphs,
         }
     }

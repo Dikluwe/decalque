@@ -62,11 +62,18 @@ pub struct DocumentGeometry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entities::PageRotation;
 
     #[test]
     fn documento_sem_glifos_e_valido() {
         let doc = DocumentGeometry {
-            page: PageGeometry { width: 595.0, height: 842.0 },
+            page: PageGeometry {
+                width: 595.0,
+                height: 842.0,
+                origin: (0.0, 0.0),
+                rotation: PageRotation::Deg0,
+                user_unit: 1.0,
+            },
             glyphs: Vec::new(),
         };
         assert!(doc.glyphs.is_empty());

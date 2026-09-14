@@ -68,9 +68,16 @@ impl CartesianOrigin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entities::PageRotation;
 
     fn page() -> PageGeometry {
-        PageGeometry { width: 595.0, height: 842.0 }
+        PageGeometry {
+            width: 595.0,
+            height: 842.0,
+            origin: (0.0, 0.0),
+            rotation: PageRotation::Deg0,
+            user_unit: 1.0,
+        }
     }
 
     #[test]
