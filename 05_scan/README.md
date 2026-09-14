@@ -151,6 +151,19 @@ cargo build --bin decalque-font-catalog
 `result.json` contém tanto a observação enriquecida quanto o relatório comparativo. Logs dos
 provedores continuam em stderr, deixando stdout como JSON puro.
 
+## Livro escaneado em sequência
+
+Para um PDF escaneado multipágina, rasterize e compare uma página por vez, mantendo o índice da
+página candidata sincronizado:
+
+```sh
+.venv-paddle/bin/python 05_scan/scan_compare_document.py livro-scan.pdf livro-digital.pdf > result.json
+```
+
+O comando usa 200 DPI por padrão (`--dpi` altera), mantém somente a página corrente em diretório
+temporário e escreve progresso em stderr. Se qualquer página falhar, termina com código 2 sem
+publicar JSON parcial. O resultado completo preserva a ordem das páginas e agrega seus vereditos.
+
 ## Testes do adaptador
 
 ```sh
