@@ -45,24 +45,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_provider(input_path: str, lang: str, ocr_version: str, device: str) -> list[dict[str, Any]]:
+    from paddleocr import PaddleOCR
+
+    pipeline = PaddleOCR(
+        lang=lang,
+        ocr_version=ocr_version,
+        device=device,
+        enable_mkldnn=False,
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        return_word_box=False,
+    )
+    results = pipeline.predict(input_path, return_word_box=False)
+    return [normalize_result(result.json) for result in results]
+
+
 def main() -> int:
     args = parse_args()
     try:
-        from paddleocr import PaddleOCR
-
         with contextlib.redirect_stdout(sys.stderr):
-            pipeline = PaddleOCR(
-                lang=args.lang,
-                ocr_version=args.ocr_version,
-                device=args.device,
-                enable_mkldnn=False,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_textline_orientation=False,
-                return_word_box=False,
-            )
-            results = pipeline.predict(args.input, return_word_box=False)
-            pages = [normalize_result(result.json) for result in results]
+            pages = run_provider(args.input, args.lang, args.ocr_version, args.device)
         json.dump(
             {"schema_version": 1, "provider": "paddleocr", "pages": pages},
             sys.stdout,

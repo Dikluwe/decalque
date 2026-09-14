@@ -140,24 +140,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def run_provider(input_path: str, base_url: str, model: str, device: str) -> list[dict[str, Any]]:
+    from paddleocr import PaddleOCRVL
+
+    pipeline = PaddleOCRVL(
+        pipeline_version="v1.6",
+        vl_rec_backend="llama-cpp-server",
+        vl_rec_server_url=base_url,
+        vl_rec_api_model_name=model,
+        device=device,
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_queues=False,
+    )
+    results = pipeline.predict(input_path, use_queues=False)
+    return [normalize_result(result.json, model) for result in results]
+
+
 def main() -> int:
     args = parse_args()
     try:
-        from paddleocr import PaddleOCRVL
-
         with contextlib.redirect_stdout(sys.stderr):
-            pipeline = PaddleOCRVL(
-                pipeline_version="v1.6",
-                vl_rec_backend="llama-cpp-server",
-                vl_rec_server_url=args.base_url,
-                vl_rec_api_model_name=args.model,
-                device=args.device,
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_queues=False,
-            )
-            results = pipeline.predict(args.input, use_queues=False)
-            normalized = [normalize_result(result.json, args.model) for result in results]
+            normalized = run_provider(args.input, args.base_url, args.model, args.device)
         json.dump(normalized, sys.stdout, ensure_ascii=False, separators=(",", ":"))
         sys.stdout.write("\n")
         return 0

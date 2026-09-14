@@ -99,6 +99,19 @@ reflow quando uma linha observada corresponde a várias linhas candidatas. Verti
 continuam `unknown`, pois caixa de tinta não é baseline e fonte candidata não comprova a fonte
 impressa no scan.
 
+## Execução integrada
+
+Com o LM Studio ativo e o catálogo compilado, todo o fluxo de uma página pode ser executado
+por um único comando:
+
+```sh
+cargo build --bin decalque-font-catalog
+.venv-paddle/bin/python 05_scan/scan_compare_pipeline.py documento.png candidato.pdf > result.json
+```
+
+`result.json` contém tanto a observação enriquecida quanto o relatório comparativo. Logs dos
+provedores continuam em stderr, deixando stdout como JSON puro.
+
 ## Testes do adaptador
 
 ```sh
