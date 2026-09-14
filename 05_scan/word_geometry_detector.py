@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import math
 import re
@@ -13,6 +14,31 @@ from typing import Any
 
 
 WORDS = re.compile(r"\S+", re.UNICODE)
+
+
+def estimate_baseline(
+    ink: list[list[bool]], start_x: int, end_x: int, offset_y: int = 0
+) -> tuple[int | None, float]:
+    """Estimate the baseline boundary from dominant per-column ink bottoms."""
+    if not ink or not ink[0] or start_x < 0 or end_x > len(ink[0]) or start_x >= end_x:
+        return None, 0.0
+    bottoms = [
+        max(y for y, row in enumerate(ink) if row[x])
+        for x in range(start_x, end_x)
+        if any(row[x] for row in ink)
+    ]
+    if not bottoms:
+        return None, 0.0
+    candidates = Counter(bottoms)
+    baseline = min(
+        candidates,
+        key=lambda candidate: (
+            -sum(abs(bottom - candidate) <= 1 for bottom in bottoms),
+            candidate,
+        ),
+    )
+    support = sum(abs(bottom - baseline) <= 1 for bottom in bottoms)
+    return offset_y + baseline + 1, support / len(bottoms)
 
 
 def ink_segments(
@@ -105,6 +131,17 @@ def attach_word_geometry(
             minimum_gap = max(2, int(math.ceil((y1 - y0) * minimum_gap_ratio)))
             boxes = ink_segments(ink.tolist(), x0, y0, minimum_gap)
             build_word_segments(line, boxes, minimum_gap)
+            ink_rows = ink.tolist()
+            for segment in line["word_segments"]:
+                baseline, confidence = estimate_baseline(
+                    ink_rows,
+                    segment["bbox"][0] - x0,
+                    segment["bbox"][2] - x0,
+                    y0,
+                )
+                segment["baseline_y_px"] = baseline
+                segment["baseline_confidence"] = confidence
+                segment["baseline_source"] = "dominant-column-ink-bottom"
 
         segments = [
             segment

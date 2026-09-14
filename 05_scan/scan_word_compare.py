@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 import unicodedata
@@ -47,6 +48,7 @@ def candidate_words(glyphs: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "line_id": line_id,
                 "x0": min(glyph["position"][0] for glyph in current),
                 "x1": max(glyph["position"][0] + glyph["advance"] for glyph in current),
+                "baseline_y": sum(glyph["position"][1] for glyph in current) / len(current),
                 "font_size_pt": max(glyph["font_size_pt"] for glyph in current),
             }
         )
@@ -69,7 +71,7 @@ def candidate_words(glyphs: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def compare(
     page: dict[str, Any], catalog: dict[str, Any], absolute_tolerance_pt: float = 1.5,
-    relative_tolerance_em: float = 0.1,
+    relative_tolerance_em: float = 0.1, minimum_baseline_confidence: float = 0.5,
 ) -> dict[str, Any]:
     candidates = candidate_words(catalog.get("glyphs", []))
     by_text: dict[str, list[dict[str, Any]]] = {}
@@ -93,12 +95,39 @@ def compare(
                     "end_x": scan[2] - candidate["x1"],
                     "width": (scan[2] - scan[0]) - (candidate["x1"] - candidate["x0"]),
                 }
-                status = "preserved" if all(abs(value) <= tolerance for value in deltas.values()) else "violated"
+                horizontal_status = "preserved" if all(abs(value) <= tolerance for value in deltas.values()) else "violated"
+                baseline = segment.get("baseline_y_pt")
+                confidence = segment.get("baseline_confidence")
+                if (
+                    isinstance(baseline, (int, float))
+                    and not isinstance(baseline, bool)
+                    and math.isfinite(baseline)
+                    and isinstance(confidence, (int, float))
+                    and not isinstance(confidence, bool)
+                    and math.isfinite(confidence)
+                    and confidence >= minimum_baseline_confidence
+                ):
+                    deltas["baseline_y"] = baseline - candidate["baseline_y"]
+                    vertical_status = "preserved" if abs(deltas["baseline_y"]) <= tolerance else "violated"
+                else:
+                    vertical_status = "unknown"
+                if "violated" in (horizontal_status, vertical_status):
+                    status = "violated"
+                elif horizontal_status == vertical_status == "preserved":
+                    status = "preserved"
+                else:
+                    status = "unknown"
                 results.append({
                     "word": segment["text"], "status": status, "deltas_pt": deltas,
                     "tolerance_pt": tolerance, "scan_bbox_pt": scan,
                     "candidate_span_pt": [candidate["x0"], candidate["x1"]],
-                    "candidate_line_id": candidate["line_id"], "vertical_status": "unknown",
+                    "candidate_baseline_y_pt": candidate["baseline_y"],
+                    "scan_baseline_y_pt": baseline,
+                    "baseline_confidence": confidence,
+                    "minimum_baseline_confidence": minimum_baseline_confidence,
+                    "candidate_line_id": candidate["line_id"],
+                    "horizontal_status": horizontal_status,
+                    "vertical_status": vertical_status,
                     "typography_status": "unknown",
                 })
             if len(candidate_line_ids) == 1:
@@ -122,13 +151,14 @@ def main() -> int:
     parser.add_argument("candidate_catalog", type=Path)
     parser.add_argument("--absolute-tolerance-pt", type=float, default=1.5)
     parser.add_argument("--relative-tolerance-em", type=float, default=0.1)
+    parser.add_argument("--minimum-baseline-confidence", type=float, default=0.5)
     args = parser.parse_args()
     try:
         pages = json.loads(args.scan_json.read_text(encoding="utf-8"))
         catalog = json.loads(args.candidate_catalog.read_text(encoding="utf-8"))
         if len(pages) != 1:
             raise ValueError("esta versão compara uma página por execução")
-        json.dump(compare(pages[0], catalog, args.absolute_tolerance_pt, args.relative_tolerance_em), sys.stdout, ensure_ascii=False, separators=(",", ":"))
+        json.dump(compare(pages[0], catalog, args.absolute_tolerance_pt, args.relative_tolerance_em, args.minimum_baseline_confidence), sys.stdout, ensure_ascii=False, separators=(",", ":"))
         sys.stdout.write("\n")
         return 0
     except Exception as error:

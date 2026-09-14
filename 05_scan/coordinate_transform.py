@@ -76,6 +76,16 @@ def convert_polygon(polygon: Any, transform: dict[str, Any]) -> list[list[float]
 def convert_node(node: dict[str, Any], transform: dict[str, Any]) -> None:
     node["bbox_pt"] = convert_bbox(node.get("bbox"), transform)
     node["polygon_pt"] = convert_polygon(node.get("polygon"), transform)
+    baseline = node.get("baseline_y_px")
+    node["baseline_y_pt"] = (
+        baseline * transform["scale_y_pt_per_px"]
+        if transform["status"] == "inferred"
+        and isinstance(baseline, (int, float))
+        and not isinstance(baseline, bool)
+        and math.isfinite(baseline)
+        and baseline >= 0
+        else None
+    )
 
 
 def enrich_page(

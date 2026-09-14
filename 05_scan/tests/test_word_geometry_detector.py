@@ -10,6 +10,21 @@ SPEC.loader.exec_module(MODULE)
 
 
 class InkSegmentsTests(unittest.TestCase):
+    def test_baseline_uses_dominant_ink_bottom_and_ignores_descenders(self):
+        ink = [[False] * 10 for _ in range(7)]
+        for x in range(1, 9):
+            bottom = 5 if x in (3, 7) else 3
+            for y in range(1, bottom + 1):
+                ink[y][x] = True
+
+        baseline, confidence = MODULE.estimate_baseline(ink, 1, 9, offset_y=20)
+
+        self.assertEqual(baseline, 24)
+        self.assertEqual(confidence, 0.75)
+
+    def test_baseline_without_ink_is_unknown(self):
+        self.assertEqual(MODULE.estimate_baseline([[False] * 3], 0, 3), (None, 0.0))
+
     def test_groups_character_components_and_splits_only_at_word_gap(self):
         ink = [[False] * 18 for _ in range(5)]
         for x in (1, 2, 4, 5, 11, 12, 14, 15):

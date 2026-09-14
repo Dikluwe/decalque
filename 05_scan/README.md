@@ -96,7 +96,7 @@ python3 05_scan/scan_word_compare.py scan-points.json candidate-fonts.json > com
 
 O relatório compara início, fim e largura horizontal, inclui cobertura e testemunhas e detecta
 reflow quando uma linha observada corresponde a várias linhas candidatas. Vertical e tipografia
-continuam `unknown`, pois caixa de tinta não é baseline e fonte candidata não comprova a fonte
+continuam `unknown` quando a baseline de tinta não alcança a confiança mínima; a fonte candidata não comprova a fonte
 impressa no scan.
 
 ## Execução integrada

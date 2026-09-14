@@ -16,6 +16,8 @@ Tokens sem correspondência textual única não herdam a caixa.
 ## Observáveis
 
 - caixas de palavra são limites mínimos da tinta do segmento, no espaço original da imagem;
+- baseline é a borda inferior dominante das colunas de tinta, com suporte de ±1 px e confiança
+  igual à fração de colunas que a sustentam; descendentes minoritários não a deslocam;
 - linha e pixels originais não são alterados;
 - cada segmento registra limiar usado, método e confiança de associação separada;
 - pontuação adjacente permanece no mesmo segmento quando não há lacuna de palavra;
@@ -25,3 +27,4 @@ Tokens sem correspondência textual única não herdam a caixa.
 
 Imagem ilegível, bbox inválida, ausência de tinta, contagem divergente, texto vazio ou associação
 ambígua gera `word_geometry_status: unknown`. Não repartir a largura da linha proporcionalmente.
+A baseline com confiança insuficiente não autoriza conclusão vertical.

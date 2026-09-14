@@ -31,7 +31,10 @@ class ScanComparePipelineTests(unittest.TestCase):
             return [{"lines": [{"id": 0, "text": "casa", "bbox": [10, 5, 30, 15], "polygon": [], "recognition_confidence": 1.0}]}]
 
         def words(page, _image):
-            page["regions"][0]["detected_lines"][0]["word_segments"] = [{"id": "0:0", "text": "casa", "bbox": [10, 5, 30, 15], "polygon": None}]
+            page["regions"][0]["detected_lines"][0]["word_segments"] = [{
+                "id": "0:0", "text": "casa", "bbox": [10, 5, 30, 15],
+                "polygon": None, "baseline_y_px": 10, "baseline_confidence": 1.0,
+            }]
             return page
 
         catalog = {
