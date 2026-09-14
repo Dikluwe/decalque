@@ -120,9 +120,10 @@ def compare(
     typographic_shape_tolerance: float = 0.12,
 ) -> dict[str, Any]:
     candidates = candidate_words(catalog.get("glyphs", []))
-    by_text: dict[str, list[dict[str, Any]]] = {}
-    for word in candidates:
-        by_text.setdefault(key(word["text"]), []).append(word)
+    by_text: dict[str, list[tuple[int, dict[str, Any]]]] = {}
+    for candidate_index, word in enumerate(candidates):
+        by_text.setdefault(key(word["text"]), []).append((candidate_index, word))
+    matched_candidate_indices: set[int] = set()
     results, line_results = [], []
     for region in page.get("regions", []):
         for line in region.get("detected_lines", []):
@@ -132,7 +133,8 @@ def compare(
                 if len(matches) != 1 or not segment.get("bbox_pt"):
                     results.append({"word": segment.get("text"), "status": "unknown"})
                     continue
-                candidate = matches[0]
+                candidate_index, candidate = matches[0]
+                matched_candidate_indices.add(candidate_index)
                 candidate_line_ids.add(candidate["line_id"])
                 scan = segment["bbox_pt"]
                 tolerance = max(absolute_tolerance_pt, relative_tolerance_em * candidate["font_size_pt"])
@@ -231,9 +233,25 @@ def compare(
                 line_status = "unknown"
             line_results.append({"scan_line_id": line.get("id"), "status": line_status, "candidate_line_ids": sorted(candidate_line_ids)})
     counts = {status: sum(item["status"] == status for item in results) for status in ("preserved", "violated", "unknown")}
+    unmatched_candidates = [
+        {
+            "text": candidate["text"],
+            "line_id": candidate["line_id"],
+            "span_pt": [candidate["x0"], candidate["x1"]],
+            "baseline_y_pt": candidate["baseline_y"],
+        }
+        for index, candidate in enumerate(candidates)
+        if index not in matched_candidate_indices
+    ]
     return {
-        "schema_version": 1, "words": results, "lines": line_results,
-        "coverage": {"comparable": counts["preserved"] + counts["violated"], "total_scan": len(results)},
+        "schema_version": 2, "words": results, "lines": line_results,
+        "coverage": {
+            "comparable": counts["preserved"] + counts["violated"],
+            "total_scan": len(results),
+            "matched_candidate": len(matched_candidate_indices),
+            "total_candidate": len(candidates),
+        },
+        "unmatched_candidate_words": unmatched_candidates,
         "counts": counts,
     }
 

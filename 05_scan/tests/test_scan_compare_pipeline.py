@@ -60,7 +60,10 @@ class ScanComparePipelineTests(unittest.TestCase):
             candidate_profile_enricher=candidate_profile,
         )
         self.assertEqual(result["comparison"]["counts"]["preserved"], 1)
-        self.assertEqual(result["comparison"]["coverage"], {"comparable": 1, "total_scan": 1})
+        self.assertEqual(result["comparison"]["coverage"], {
+            "comparable": 1, "total_scan": 1,
+            "matched_candidate": 1, "total_candidate": 1,
+        })
         self.assertEqual(result["observation"]["point_transform"]["status"], "inferred")
         profile = result["observation"]["regions"][0]["detected_lines"][0]["word_segments"][0]["typographic_profile"]
         self.assertEqual(profile["status"], "observed")

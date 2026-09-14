@@ -12,6 +12,25 @@ FIXTURE = ROOT / "03_infra" / "tests" / "fixtures" / "typst.pdf"
 
 
 class ScanTypographyExecutionTests(unittest.TestCase):
+    def test_ocr_error_corpus_exposes_text_mutations_and_omissions(self):
+        result = subprocess.run(
+            [sys.executable, str(SCAN / "ocr_error_corpus.py")],
+            cwd=ROOT, capture_output=True, text=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["mutation_score"], 1.0)
+        self.assertEqual(
+            [(case["case"], case["status"]) for case in report["cases"]],
+            [("exact", "preserved"), ("character-substitution", "detected"),
+             ("inserted-word", "detected"), ("omitted-word", "detected"),
+             ("merged-space", "detected")],
+        )
+        omitted = report["cases"][3]
+        self.assertEqual(
+            [word["text"] for word in omitted["unmatched_candidate_words"]], ["gypq"],
+        )
+
     def test_multiline_layout_corpus_detects_leading_and_reflow(self):
         result = subprocess.run(
             [sys.executable, str(SCAN / "layout_corpus.py")],

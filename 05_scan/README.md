@@ -95,12 +95,15 @@ como troca visualmente semelhante e Bitstream Vera Serif como controle de tinta 
 ```sh
 python3 05_scan/typography_corpus.py
 python3 05_scan/layout_corpus.py
+python3 05_scan/ocr_error_corpus.py
 ```
 
 O JSON resultante inclui os vereditos por palavra e o `mutation_score` das trocas de família,
 peso, estilo, largura, tamanho, tracking, espaço entre palavras e baseline, tanto na referência
 limpa quanto sob baixa resolução, blur, ruído, compressão JPEG e rotação leve.
 O segundo comando exercita PDFs multilinha e rejeita mudanças de leading e reflow.
+O terceiro executa erros controlados de OCR e expõe tanto segmentos desconhecidos quanto palavras
+do PDF candidato que ficaram sem correspondência.
 
 ## Evidência de fonte do PDF candidato
 

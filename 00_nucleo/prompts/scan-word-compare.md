@@ -21,5 +21,8 @@ pixels.
 - `violated`: correspondência única com delta X ou baseline fora da tolerância, ou reflow demonstrado;
 - `unknown`: texto ausente/repetido, geometria ausente ou evidência insuficiente.
 
-Cobertura é sempre apresentada com as métricas. Cada violação inclui palavra, caixas, deltas e
-limiar. `Unknown` nunca é convertido em sucesso agregado.
+Cobertura é sempre apresentada nos dois sentidos: segmentos comparáveis sobre o total do scan e
+palavras candidatas correspondidas sobre o total candidato. Palavras candidatas sem segmento
+correspondente são listadas como testemunhas; isso torna omissões do OCR observáveis sem classificá-las
+falsamente como divergência geométrica. Cada violação inclui palavra, caixas, deltas e limiar.
+`Unknown` ou cobertura incompleta nunca são convertidos em sucesso agregado.

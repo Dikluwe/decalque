@@ -42,7 +42,10 @@ class ScanWordCompareTests(unittest.TestCase):
         report = MODULE.compare(scan(segment("casa", [10, 5, 30, 15])), {"glyphs": [glyph(c, 10 + i * 5) for i, c in enumerate("casa")]})
         self.assertEqual(report["words"][0]["status"], "preserved")
         self.assertEqual(report["words"][0]["vertical_status"], "preserved")
-        self.assertEqual(report["coverage"], {"comparable": 1, "total_scan": 1})
+        self.assertEqual(report["coverage"], {
+            "comparable": 1, "total_scan": 1,
+            "matched_candidate": 1, "total_candidate": 1,
+        })
         self.assertEqual(report["words"][0]["typography_status"], "unknown")
 
     def test_matching_raster_profiles_preserve_typography(self):

@@ -31,6 +31,11 @@ Um corpus multilinha separado mantém texto, fonte e tamanho, alterando o leadin
 forçando uma linha observada a ocupar várias linhas candidatas. O primeiro ataque deve expor
 delta de baseline; o segundo deve produzir testemunha de reflow com mais de um `candidate_line_id`.
 
+Um corpus de erros OCR executa o comparador como subprocesso para troca de caractere, inserção,
+omissão e junção indevida de palavras. Divergência textual permanece `unknown` no segmento, mas
+todo ataque deve deixar cobertura incompleta ou candidato não correspondido e ser detectado pelo
+corpus com `mutation_score = 1.0`.
+
 ## Robustez do scan
 
 Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px, ruído
