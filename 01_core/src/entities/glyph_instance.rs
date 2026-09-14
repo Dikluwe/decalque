@@ -3,13 +3,7 @@
 //! @layer L1
 //! @updated 2026-09-14
 //!
-//! Unidade atómica de comparação: um glifo desenhado numa posição, e a
-//! colecção de todos os glifos de um documento já em coordenadas normalizadas.
-//!
-//! `DocumentGeometry` permanece provisoriamente aqui até a materialização do
-//! prompt próprio `00_nucleo/prompts/document-geometry.md`.
-
-use super::page_geometry::PageGeometry;
+//! Unidade atómica de comparação: um glifo desenhado numa posição.
 
 /// Um glifo desenhado numa posição da página.
 ///
@@ -54,36 +48,9 @@ pub enum TextMappingStatus {
     Unmapped,
 }
 
-/// Geometria completa de um documento: a página e todos os seus glifos, já
-/// em coordenadas normalizadas.
-#[derive(Debug, Clone, PartialEq)]
-pub struct DocumentGeometry {
-    /// Dimensões da página que produziu estes glifos.
-    pub page: PageGeometry,
-    /// Glifos do documento. Vazio é um caso válido (documento sem conteúdo),
-    /// não excepcional.
-    pub glyphs: Vec<GlyphInstance>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entities::PageRotation;
-
-    #[test]
-    fn documento_sem_glifos_e_valido() {
-        let doc = DocumentGeometry {
-            page: PageGeometry {
-                width: 595.0,
-                height: 842.0,
-                origin: (0.0, 0.0),
-                rotation: PageRotation::Deg0,
-                user_unit: 1.0,
-            },
-            glyphs: Vec::new(),
-        };
-        assert!(doc.glyphs.is_empty());
-    }
 
     #[test]
     fn glifo_suporta_ligadura_como_sequencia_de_codepoints() {

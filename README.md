@@ -108,6 +108,6 @@ decalque/
 `normalize_to_top_left`, o intérprete de content stream e o adaptador
 `lopdf` já refletem as especificações activas.
 `CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
-consome a origem da caixa efectiva. O próximo passo é materializar os diagnósticos
-de página e `DocumentGeometry`, seguido da revisão do motor, `02_shell` (CLI) e
-`04_wiring`.
+consome a origem da caixa efectiva. Os diagnósticos de página e `DocumentGeometry`
+também já estão materializados. O próximo passo é revisar o motor de comparação,
+seguido de `02_shell` (CLI) e `04_wiring`.

@@ -15,7 +15,7 @@ pub use content::{
 };
 pub use engine::{compare, ComparisonReport, GlyphPair};
 pub use entities::{
-    DocumentGeometry, GlyphInstance, MeasurementResolution, PageGeometry, PdfError,
-    TextMappingStatus,
+    diagnose_page, DocumentGeometry, GlyphInstance, MeasurementResolution, PageDiagnostic,
+    PageGeometry, PdfError, TextMappingStatus,
 };
 pub use geometry::normalize_to_top_left;

@@ -406,6 +406,7 @@ mod tests {
                 user_unit: 1.0,
             },
             glyphs,
+            diagnostics: Vec::new(),
         }
     }
 
