@@ -1,26 +1,12 @@
 //! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/engine/compare.md
 //! @layer L1
-//! @updated 2026-08-12
+//! @updated 2026-09-14
 //!
 //! Motor de emparelhamento e comparação de dois `DocumentGeometry`.
 //!
-//! ESTADO: cumpre a revisão de 2026-08-11 da spec. Divergências por aplicar,
-//! todas decididas em 2026-08-12:
-//!
-//! 1. Referência do cluster: este código usa a posição do primeiro glifo em
-//!    ordem de leitura; a spec passou ao **deslocamento mediano dos pares**.
-//!    Consequência do desenho actual: se o glifo deslocado for o primeiro da
-//!    linha, o par dele mede 0.0 e os vizinhos medem o simétrico do
-//!    deslocamento real (atribuição invertida). Nenhum dos testes deste
-//!    ficheiro põe o glifo deslocado em primeiro lugar, por isso passam todos.
-//! 2. Métricas agregadas: aqui são `f64` e saem `0.0` com `pairs` vazio — que
-//!    se lê como paridade perfeita. A spec passou a `Option<f64>` + `Coverage`.
-//! 3. `cluster_shifts` (deslocamento sistemático por linha) não existe aqui.
-//! 4. Emparelhamento posicional decide-se por `codepoints.is_none()` e não por
-//!    `mapping_status == Unmapped`, campo que ainda não existe em
-//!    `GlyphInstance` (ver `glyph_instance.rs`).
-//! 5. `render_mode` não existe no glifo; sem efeito no motor, que não o usa.
+//! Implementa a revisão de 2026-08-12 da especificação: referência mediana
+//! por cluster, cobertura explícita e métricas opcionais quando não há pares.
 
 use crate::entities::{DocumentGeometry, GlyphInstance, MeasurementResolution};
 
@@ -40,23 +26,46 @@ pub struct GlyphPair<'a> {
     pub within_resolution: bool,
 }
 
+/// Deslocamento sistemático observado num par de clusters (linha).
+///
+/// Um cluster com um único par tem delta relativo zero por definição; este
+/// registro, com `pairs == 1`, torna essa limitação inspecionável.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClusterShift {
+    pub index: usize,
+    pub shift: (f64, f64),
+    pub pairs: usize,
+}
+
+/// Cobertura do emparelhamento por lado.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Coverage {
+    pub matched_a: usize,
+    pub total_a: usize,
+    pub matched_b: usize,
+    pub total_b: usize,
+}
+
 /// Relatório agregado de uma comparação.
 ///
 /// Glifos sem par **não são erro**: `unmatched_*` regista quantos ficaram de
 /// cada lado (pode ser sintoma real — conteúdo a mais/a menos — ou limitação
 /// do emparelhamento; não decidir qual sem inspecção humana).
 ///
-/// A mediana é o sinal primário de triagem (lição 3 do P948: `max|Δ|` tem
-/// artefactos que a mediana não tem); o máximo é exposto para inspecção.
+/// A mediana é o sinal primário de triagem, mas nunca deve ser apresentada
+/// sem a cobertura: poucos pares podem produzir uma mediana enganadoramente
+/// boa. Métricas `None` significam que nenhuma medição aconteceu.
 #[derive(Debug)]
 pub struct ComparisonReport<'a> {
     pub pairs: Vec<GlyphPair<'a>>,
     pub unmatched_a: Vec<&'a GlyphInstance>,
     pub unmatched_b: Vec<&'a GlyphInstance>,
-    pub median_abs_dx: f64,
-    pub median_abs_dy: f64,
-    pub max_abs_dx: f64,
-    pub max_abs_dy: f64,
+    pub median_abs_dx: Option<f64>,
+    pub median_abs_dy: Option<f64>,
+    pub max_abs_dx: Option<f64>,
+    pub max_abs_dy: Option<f64>,
+    pub coverage: Coverage,
+    pub cluster_shifts: Vec<ClusterShift>,
 }
 
 /// Compara dois `DocumentGeometry` (já normalizados) e produz o relatório.
@@ -77,9 +86,9 @@ pub struct ComparisonReport<'a> {
 ///    a diferença de largura entre ligadura e expandido não é divergência de
 ///    posição a reportar. Glifos sem `codepoints` não têm âncora textual e são
 ///    emparelhados entre si pela ordem horizontal dentro do cluster.
-/// 4. **Delta relativo à origem do cluster** (posição do primeiro glifo do
-///    cluster, em ordem de leitura, de cada lado), não da página inteira —
-///    páginas de tamanhos diferentes são legítimas (ver `PageGeometry`).
+/// 4. **Delta relativo ao deslocamento mediano do cluster**, não à página
+///    inteira. O deslocamento sistemático continua observável em
+///    `ComparisonReport::cluster_shifts`.
 ///
 /// O motor não sabe nem precisa de saber qual caso de uso está a servir
 /// (ADR 0001): o que muda entre Caso 1 e Caso 2 é **parâmetro** (a
@@ -95,21 +104,46 @@ pub fn compare<'a>(
     let mut pairs = Vec::new();
     let mut unmatched_a = Vec::new();
     let mut unmatched_b = Vec::new();
+    let mut cluster_shifts = Vec::new();
 
     // Emparelha clusters pela ordem vertical; clusters a mais de um lado
     // contribuem todos os seus glifos para unmatched.
     let n = clusters_a.len().min(clusters_b.len());
     for i in 0..n {
+        let mut cluster_pairs = Vec::new();
         emparelhar_clusters(
             &a.glyphs,
             &clusters_a[i],
             &b.glyphs,
             &clusters_b[i],
-            resolution,
-            &mut pairs,
+            &mut cluster_pairs,
             &mut unmatched_a,
             &mut unmatched_b,
         );
+        if !cluster_pairs.is_empty() {
+            let mut offsets_x: Vec<f64> = cluster_pairs
+                .iter()
+                .map(|(ga, gb)| gb.position.0 - ga.position.0)
+                .collect();
+            let mut offsets_y: Vec<f64> = cluster_pairs
+                .iter()
+                .map(|(ga, gb)| gb.position.1 - ga.position.1)
+                .collect();
+            let shift = (
+                mediana(&mut offsets_x).expect("cluster tem pares"),
+                mediana(&mut offsets_y).expect("cluster tem pares"),
+            );
+            cluster_shifts.push(ClusterShift {
+                index: i,
+                shift,
+                pairs: cluster_pairs.len(),
+            });
+            pairs.extend(
+                cluster_pairs
+                    .into_iter()
+                    .map(|(ga, gb)| medir_par(ga, gb, shift, resolution)),
+            );
+        }
     }
     for c in &clusters_a[n..] {
         unmatched_a.extend(c.iter().map(|&i| &a.glyphs[i]));
@@ -120,10 +154,16 @@ pub fn compare<'a>(
 
     let mut abs_dx: Vec<f64> = pairs.iter().map(|p| p.delta.0.abs()).collect();
     let mut abs_dy: Vec<f64> = pairs.iter().map(|p| p.delta.1.abs()).collect();
-    let max_abs_dx = abs_dx.iter().copied().fold(0.0, f64::max);
-    let max_abs_dy = abs_dy.iter().copied().fold(0.0, f64::max);
+    let max_abs_dx = abs_dx.iter().copied().reduce(f64::max);
+    let max_abs_dy = abs_dy.iter().copied().reduce(f64::max);
     let median_abs_dx = mediana(&mut abs_dx);
     let median_abs_dy = mediana(&mut abs_dy);
+    let coverage = Coverage {
+        matched_a: a.glyphs.len() - unmatched_a.len(),
+        total_a: a.glyphs.len(),
+        matched_b: b.glyphs.len() - unmatched_b.len(),
+        total_b: b.glyphs.len(),
+    };
 
     ComparisonReport {
         pairs,
@@ -133,6 +173,8 @@ pub fn compare<'a>(
         median_abs_dy,
         max_abs_dx,
         max_abs_dy,
+        coverage,
+        cluster_shifts,
     }
 }
 
@@ -160,13 +202,16 @@ fn clusterizar(glyphs: &[GlyphInstance]) -> Vec<Vec<usize>> {
     let mut y_referencia = 0.0;
     for i in ordem {
         let g = &glyphs[i];
-        let novo_cluster = clusters.last().is_none()
-            || (g.position.1 - y_referencia).abs() > 0.5 * g.font_size_pt;
+        let novo_cluster =
+            clusters.last().is_none() || (g.position.1 - y_referencia).abs() > 0.5 * g.font_size_pt;
         if novo_cluster {
             y_referencia = g.position.1;
             clusters.push(vec![i]);
         } else {
-            clusters.last_mut().expect("cluster corrente existe").push(i);
+            clusters
+                .last_mut()
+                .expect("cluster corrente existe")
+                .push(i);
         }
     }
     clusters
@@ -181,15 +226,10 @@ fn emparelhar_clusters<'a>(
     cluster_a: &[usize],
     glyphs_b: &'a [GlyphInstance],
     cluster_b: &[usize],
-    resolution: &MeasurementResolution,
-    pairs: &mut Vec<GlyphPair<'a>>,
+    pairs: &mut Vec<(&'a GlyphInstance, &'a GlyphInstance)>,
     unmatched_a: &mut Vec<&'a GlyphInstance>,
     unmatched_b: &mut Vec<&'a GlyphInstance>,
 ) {
-    // Origem do cluster: posição do primeiro glifo em ordem de leitura.
-    let origem_a = glyphs_a[cluster_a[0]].position;
-    let origem_b = glyphs_b[cluster_b[0]].position;
-
     // Expansão a nível de codepoint (normalização de ligaduras, ADR 0001):
     // cada entrada é (codepoint, índice do glifo que o contribuiu).
     let texto_a = expandir(glyphs_a, cluster_a);
@@ -235,13 +275,7 @@ fn emparelhar_clusters<'a>(
                 // alinhamento); nesse caso não se duplica o par.
                 if !pares_textuais.contains(&(ga, gb)) {
                     pares_textuais.push((ga, gb));
-                    pairs.push(emparelhar(
-                        &glyphs_a[ga],
-                        origem_a,
-                        &glyphs_b[gb],
-                        origem_b,
-                        resolution,
-                    ));
+                    pairs.push((&glyphs_a[ga], &glyphs_b[gb]));
                 }
                 segmento_inicio = k;
             }
@@ -254,30 +288,38 @@ fn emparelhar_clusters<'a>(
     let mut sem_ancora_a: Vec<usize> = cluster_a
         .iter()
         .copied()
-        .filter(|&i| !emparelhados_a[i] && glyphs_a[i].codepoints.is_none())
+        .filter(|&i| {
+            !emparelhados_a[i]
+                && glyphs_a[i].mapping_status == crate::entities::TextMappingStatus::Unmapped
+        })
         .collect();
     let mut sem_ancora_b: Vec<usize> = cluster_b
         .iter()
         .copied()
-        .filter(|&i| !emparelhados_b[i] && glyphs_b[i].codepoints.is_none())
+        .filter(|&i| {
+            !emparelhados_b[i]
+                && glyphs_b[i].mapping_status == crate::entities::TextMappingStatus::Unmapped
+        })
         .collect();
     sem_ancora_a.sort_by(|&i, &j| {
-        glyphs_a[i].position.0.partial_cmp(&glyphs_a[j].position.0).unwrap_or(std::cmp::Ordering::Equal)
+        glyphs_a[i]
+            .position
+            .0
+            .partial_cmp(&glyphs_a[j].position.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
     sem_ancora_b.sort_by(|&i, &j| {
-        glyphs_b[i].position.0.partial_cmp(&glyphs_b[j].position.0).unwrap_or(std::cmp::Ordering::Equal)
+        glyphs_b[i]
+            .position
+            .0
+            .partial_cmp(&glyphs_b[j].position.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
     let m = sem_ancora_a.len().min(sem_ancora_b.len());
     for k in 0..m {
         emparelhados_a[sem_ancora_a[k]] = true;
         emparelhados_b[sem_ancora_b[k]] = true;
-        pairs.push(emparelhar(
-            &glyphs_a[sem_ancora_a[k]],
-            origem_a,
-            &glyphs_b[sem_ancora_b[k]],
-            origem_b,
-            resolution,
-        ));
+        pairs.push((&glyphs_a[sem_ancora_a[k]], &glyphs_b[sem_ancora_b[k]]));
     }
 
     // O que sobrou de cada lado fica sem par — registado, não julgado.
@@ -340,42 +382,46 @@ fn lcs(a: &[(char, usize)], b: &[(char, usize)]) -> Vec<(usize, usize)> {
     pares
 }
 
-/// Constrói um `GlyphPair`: delta `b − a` em coordenadas relativas à origem
-/// de cada cluster, e veredicto da resolução usando o tamanho de fonte de A.
-fn emparelhar<'a>(
+/// Mede um par contra o deslocamento mediano do seu cluster.
+fn medir_par<'a>(
     a: &'a GlyphInstance,
-    origem_a: (f64, f64),
     b: &'a GlyphInstance,
-    origem_b: (f64, f64),
+    shift: (f64, f64),
     resolution: &MeasurementResolution,
 ) -> GlyphPair<'a> {
-    let rel_a = (a.position.0 - origem_a.0, a.position.1 - origem_a.1);
-    let rel_b = (b.position.0 - origem_b.0, b.position.1 - origem_b.1);
-    let delta = (rel_b.0 - rel_a.0, rel_b.1 - rel_a.1);
-    let within_resolution =
-        resolution.is_within(delta.0, a.font_size_pt) && resolution.is_within(delta.1, a.font_size_pt);
-    GlyphPair { a, b, delta, within_resolution }
+    let delta = (
+        b.position.0 - a.position.0 - shift.0,
+        b.position.1 - a.position.1 - shift.1,
+    );
+    let within_resolution = resolution.is_within(delta.0, a.font_size_pt)
+        && resolution.is_within(delta.1, a.font_size_pt);
+    GlyphPair {
+        a,
+        b,
+        delta,
+        within_resolution,
+    }
 }
 
-/// Mediana de uma fatia (modificada in-place pela ordenação). Vazio → 0.0.
-fn mediana(valores: &mut [f64]) -> f64 {
+/// Mediana de uma fatia (modificada in-place pela ordenação).
+fn mediana(valores: &mut [f64]) -> Option<f64> {
     if valores.is_empty() {
-        return 0.0;
+        return None;
     }
     valores.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
     let meio = valores.len() / 2;
     if valores.len() % 2 == 1 {
-        valores[meio]
+        Some(valores[meio])
     } else {
-        (valores[meio - 1] + valores[meio]) / 2.0
+        Some((valores[meio - 1] + valores[meio]) / 2.0)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entities::PageRotation;
     use crate::entities::PageGeometry;
+    use crate::entities::PageRotation;
     use crate::entities::TextMappingStatus;
 
     fn glifo(x: f64, y: f64, codepoints: Option<Vec<char>>) -> GlyphInstance {
@@ -432,10 +478,12 @@ mod tests {
         assert!(r.unmatched_b.is_empty());
         assert_eq!(r.pairs.len(), 3); // um par por glifo 1-1
         assert!(r.pairs.iter().all(|p| p.delta == (0.0, 0.0)));
-        assert_eq!(r.median_abs_dx, 0.0);
-        assert_eq!(r.median_abs_dy, 0.0);
-        assert_eq!(r.max_abs_dx, 0.0);
-        assert_eq!(r.max_abs_dy, 0.0);
+        assert_eq!(r.median_abs_dx, Some(0.0));
+        assert_eq!(r.median_abs_dy, Some(0.0));
+        assert_eq!(r.max_abs_dx, Some(0.0));
+        assert_eq!(r.max_abs_dy, Some(0.0));
+        assert_eq!(r.coverage.matched_a, r.coverage.total_a);
+        assert!(r.cluster_shifts.iter().all(|s| s.shift == (0.0, 0.0)));
     }
 
     #[test]
@@ -444,8 +492,11 @@ mod tests {
         let b = doc(vec![]);
         let r = compare(&a, &b, &tolerancia());
         assert!(r.pairs.is_empty());
-        assert_eq!(r.median_abs_dx, 0.0);
-        assert_eq!(r.max_abs_dx, 0.0);
+        assert_eq!(r.median_abs_dx, None);
+        assert_eq!(r.median_abs_dy, None);
+        assert_eq!(r.max_abs_dx, None);
+        assert_eq!(r.max_abs_dy, None);
+        assert!(r.cluster_shifts.is_empty());
     }
 
     #[test]
@@ -472,42 +523,50 @@ mod tests {
         let quietos = r.pairs.iter().filter(|p| approx(p.delta.0, 0.0)).count();
         assert_eq!(quietos, 2);
         assert!(r.pairs.iter().all(|p| approx(p.delta.1, 0.0)));
-        assert!(approx(r.max_abs_dx, 5.0));
-        assert!(approx(r.median_abs_dx, 0.0)); // mediana robusta ao outlier (lição 3)
+        assert!(approx(r.max_abs_dx.unwrap(), 5.0));
+        assert!(approx(r.median_abs_dx.unwrap(), 0.0)); // mediana robusta ao outlier (lição 3)
     }
 
     #[test]
     fn glifo_deslocado_5pt_em_linha_propria_tem_delta_5_e_vizinhos_zero() {
-        // Três linhas (clusters), duas letras cada; a segunda letra da linha
-        // do meio desloca 5pt em x. Como a origem de cada cluster é o
-        // primeiro glifo da linha (inalterado), o deslocamento é observável
-        // e as linhas vizinhas mantêm delta 0 — a origem de cada cluster não
-        // é contaminada pelo deslocamento alheio.
+        // Três linhas com três letras; um outlier não move a mediana da linha.
         let a = doc(vec![
             glifo(100.0, 700.0, Some(vec!['a'])),
             glifo(110.0, 700.0, Some(vec!['b'])),
+            glifo(120.0, 700.0, Some(vec!['x'])),
             glifo(100.0, 720.0, Some(vec!['c'])),
             glifo(110.0, 720.0, Some(vec!['d'])),
+            glifo(120.0, 720.0, Some(vec!['y'])),
             glifo(100.0, 740.0, Some(vec!['e'])),
             glifo(110.0, 740.0, Some(vec!['f'])),
+            glifo(120.0, 740.0, Some(vec!['z'])),
         ]);
         let b = doc(vec![
             glifo(100.0, 700.0, Some(vec!['a'])),
             glifo(110.0, 700.0, Some(vec!['b'])),
+            glifo(120.0, 700.0, Some(vec!['x'])),
             glifo(100.0, 720.0, Some(vec!['c'])),
             glifo(115.0, 720.0, Some(vec!['d'])), // +5pt em x
+            glifo(120.0, 720.0, Some(vec!['y'])),
             glifo(100.0, 740.0, Some(vec!['e'])),
             glifo(110.0, 740.0, Some(vec!['f'])),
+            glifo(120.0, 740.0, Some(vec!['z'])),
         ]);
         let r = compare(&a, &b, &tolerancia());
-        assert_eq!(r.pairs.len(), 6);
+        assert_eq!(r.pairs.len(), 9);
         let deslocado = r.pairs.iter().filter(|p| approx(p.delta.0, 5.0)).count();
         let quietos = r.pairs.iter().filter(|p| approx(p.delta.0, 0.0)).count();
         assert_eq!(deslocado, 1);
-        assert_eq!(quietos, 5);
-        assert!(approx(r.max_abs_dx, 5.0));
-        assert!(approx(r.median_abs_dx, 0.0)); // mediana robusta ao outlier (lição 3)
-        assert!(!r.pairs.iter().find(|p| approx(p.delta.0, 5.0)).unwrap().within_resolution);
+        assert_eq!(quietos, 8);
+        assert!(approx(r.max_abs_dx.unwrap(), 5.0));
+        assert!(approx(r.median_abs_dx.unwrap(), 0.0));
+        assert!(
+            !r.pairs
+                .iter()
+                .find(|p| approx(p.delta.0, 5.0))
+                .unwrap()
+                .within_resolution
+        );
     }
 
     #[test]
@@ -553,19 +612,21 @@ mod tests {
         assert!(r.unmatched_a.is_empty() && r.unmatched_b.is_empty());
         assert_eq!(r.pairs.len(), 2);
         let posicional = r.pairs.iter().find(|p| p.a.codepoints.is_none()).unwrap();
-        assert!(approx(posicional.delta.0, 1.0));
+        assert!(approx(posicional.delta.0, 0.5));
     }
 
     #[test]
     fn tolerancia_relativa_ao_em_usa_font_size_do_glifo() {
-        // Linha com dois glifos; o segundo desloca 0.15pt em x. (Com um glifo
-        // único por cluster a origem seria auto-referente e o delta seria 0.)
+        // Dois glifos estáveis mantêm a mediana em zero quando o terceiro
+        // desloca 0.15pt em x.
         let base = |x2: f64| {
             let mut g1 = glifo(100.0, 700.0, Some(vec!['a']));
             let mut g2 = glifo(x2, 700.0, Some(vec!['b']));
+            let mut g3 = glifo(140.0, 700.0, Some(vec!['c']));
             g1.font_size_pt = 10.0;
             g2.font_size_pt = 10.0;
-            doc(vec![g1, g2])
+            g3.font_size_pt = 10.0;
+            doc(vec![g1, g2, g3])
         };
         let a = base(120.0);
         let b = base(120.15);
@@ -596,5 +657,73 @@ mod tests {
         let r = compare(&a, &b, &tolerancia());
         assert!(r.unmatched_a.is_empty() && r.unmatched_b.is_empty());
         assert!(r.pairs.iter().all(|p| p.delta == (0.0, 0.0)));
+    }
+
+    #[test]
+    fn primeiro_glifo_deslocado_e_identificado_sem_acusar_vizinhos() {
+        let a = doc(vec![
+            glifo(100.0, 700.0, Some(vec!['a'])),
+            glifo(120.0, 700.0, Some(vec!['b'])),
+            glifo(140.0, 700.0, Some(vec!['c'])),
+        ]);
+        let b = doc(vec![
+            glifo(105.0, 700.0, Some(vec!['a'])),
+            glifo(120.0, 700.0, Some(vec!['b'])),
+            glifo(140.0, 700.0, Some(vec!['c'])),
+        ]);
+        let r = compare(&a, &b, &tolerancia());
+        assert!(approx(r.pairs[0].delta.0, 5.0));
+        assert!(r.pairs[1..].iter().all(|p| approx(p.delta.0, 0.0)));
+    }
+
+    #[test]
+    fn deslocamento_sistematico_da_linha_fica_em_cluster_shift() {
+        let a = doc(vec![
+            glifo(100.0, 700.0, Some(vec!['a'])),
+            glifo(120.0, 700.0, Some(vec!['b'])),
+        ]);
+        let b = doc(vec![
+            glifo(105.0, 700.0, Some(vec!['a'])),
+            glifo(125.0, 700.0, Some(vec!['b'])),
+        ]);
+        let r = compare(&a, &b, &tolerancia());
+        assert!(r.pairs.iter().all(|p| p.delta == (0.0, 0.0)));
+        assert_eq!(r.cluster_shifts[0].shift, (5.0, 0.0));
+        assert_eq!(r.cluster_shifts[0].pairs, 2);
+    }
+
+    #[test]
+    fn sem_pares_nao_finge_paridade_e_preserva_cobertura() {
+        let a = doc(vec![glifo(100.0, 700.0, Some(vec!['a']))]);
+        let b = doc(vec![glifo(100.0, 700.0, Some(vec!['z']))]);
+        let r = compare(&a, &b, &tolerancia());
+        assert_eq!(r.median_abs_dx, None);
+        assert_eq!(r.max_abs_dy, None);
+        assert!(r.cluster_shifts.is_empty());
+        assert_eq!(r.coverage.matched_a, 0);
+        assert_eq!(r.coverage.total_a, 1);
+        assert_eq!(r.coverage.matched_b, 0);
+        assert_eq!(r.coverage.total_b, 1);
+    }
+
+    #[test]
+    fn cobertura_conta_todos_os_glifos_de_uma_ligadura() {
+        let a = doc(vec![glifo(100.0, 700.0, Some(vec!['f', 'i']))]);
+        let b = doc(vec![
+            glifo(100.0, 700.0, Some(vec!['f'])),
+            glifo(106.0, 700.0, Some(vec!['i'])),
+        ]);
+        let r = compare(&a, &b, &tolerancia());
+        assert_eq!(r.pairs.len(), 1);
+        assert_eq!(r.coverage.matched_a, 1);
+        assert_eq!(r.coverage.matched_b, 2);
+        assert_eq!(
+            r.coverage.matched_a + r.unmatched_a.len(),
+            r.coverage.total_a
+        );
+        assert_eq!(
+            r.coverage.matched_b + r.unmatched_b.len(),
+            r.coverage.total_b
+        );
     }
 }

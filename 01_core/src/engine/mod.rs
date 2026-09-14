@@ -2,4 +2,4 @@
 
 pub mod compare;
 
-pub use compare::{compare, ComparisonReport, GlyphPair};
+pub use compare::{compare, ClusterShift, ComparisonReport, Coverage, GlyphPair};

@@ -13,7 +13,7 @@ pub use content::{
     GlyphCodeDecoder, RawFontData, RawFontEncoding, RawFontSubtype, TextInterpretationInput,
     TextInterpretationOutput, TextInterpreterDiagnostic, TjItem, XObjectInfo, XObjectSubtype,
 };
-pub use engine::{compare, ComparisonReport, GlyphPair};
+pub use engine::{compare, ClusterShift, ComparisonReport, Coverage, GlyphPair};
 pub use entities::{
     diagnose_page, DocumentGeometry, GlyphInstance, MeasurementResolution, PageDiagnostic,
     PageGeometry, PdfError, TextMappingStatus,
