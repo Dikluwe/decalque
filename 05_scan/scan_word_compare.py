@@ -129,6 +129,8 @@ def compare(
                     "horizontal_status": horizontal_status,
                     "vertical_status": vertical_status,
                     "typography_status": "unknown",
+                    "typography_reason": "candidate-shape-evidence-absent",
+                    "observed_typographic_profile": segment.get("typographic_profile"),
                 })
             if len(candidate_line_ids) == 1:
                 line_status = "preserved"

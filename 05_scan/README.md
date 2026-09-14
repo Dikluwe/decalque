@@ -69,6 +69,19 @@ Ela preserva os campos em pixels e acrescenta `bbox_pt`/`polygon_pt`. Proporçã
 crop desconhecido ou dimensões inválidas deixam a transformação e as coordenadas em pontos
 como `unknown`/`null`.
 
+## Perfil tipográfico observado
+
+Com a geometria em pontos, derive medidas conservadoras do envelope de tinta:
+
+```sh
+python3 05_scan/typographic_profile.py scan-points.json > scan-profile.json
+```
+
+O perfil registra altura-x apenas em palavras sem acentos compostas por letras de altura-x,
+altura ascendente quando o texto contém ascendentes e profundidade descendente quando contém
+descendentes. Medidas sem sustentação ficam `null`; o nome da fonte candidata não é usado como
+prova visual.
+
 ## Evidência de fonte do PDF candidato
 
 Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF
@@ -94,10 +107,10 @@ Com geometria em pontos e o catálogo candidato, gere o primeiro relatório comp
 python3 05_scan/scan_word_compare.py scan-points.json candidate-fonts.json > comparison.json
 ```
 
-O relatório compara início, fim e largura horizontal, inclui cobertura e testemunhas e detecta
-reflow quando uma linha observada corresponde a várias linhas candidatas. Vertical e tipografia
-continuam `unknown` quando a baseline de tinta não alcança a confiança mínima; a fonte candidata não comprova a fonte
-impressa no scan.
+O relatório compara início, fim, largura horizontal e baseline, inclui cobertura e testemunhas e
+detecta reflow quando uma linha observada corresponde a várias linhas candidatas. O perfil
+tipográfico observado acompanha a palavra, mas `typography_status` continua `unknown` até existir
+evidência rasterizada da forma da fonte candidata.
 
 ## Execução integrada
 

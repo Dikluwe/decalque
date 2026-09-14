@@ -17,6 +17,7 @@ import line_geometry_matcher
 import paddle_line_detector
 import paddle_lmstudio_adapter
 import scan_word_compare
+import typographic_profile
 import word_geometry_detector
 
 
@@ -63,6 +64,7 @@ def run_pipeline(
     page = line_geometry_matcher.enrich_page(pages[0], detected_pages[0])
     page = word_enricher(page, image)
     page = coordinate_transform.enrich_page(page, catalog)
+    page = typographic_profile.enrich_page(page)
     page = candidate_font_matcher.enrich_page(page, catalog, str(candidate_path))
     report = scan_word_compare.compare(page, catalog)
     return {"schema_version": 1, "observation": page, "comparison": report}
