@@ -28,6 +28,20 @@ PaddleOCR baixa os modelos locais de detecção de layout.
 Também são aceitos PDFs. Use `--base-url`, `--model` e `--device` para substituir os padrões.
 O processo retorna código 2 quando faltam dependências ou quando o provedor falha.
 
+## Geometria real de linhas
+
+O detector clássico produz polígonos observados para cada linha. Salve essa saída e associe-a
+ao JSON do VLM:
+
+```sh
+.venv-paddle/bin/python 05_scan/paddle_line_detector.py documento.png > lines.json
+python3 05_scan/line_geometry_matcher.py scan.json lines.json > scan-with-lines.json
+```
+
+O detector roda em CPU com MKL-DNN desativado por compatibilidade com Paddle 3.3.1. As caixas
+de palavra estimadas pelo Paddle não são solicitadas. Tokens apenas recebem
+`line_geometry_ref` quando aparecem em uma única linha detectada; sua caixa continua `null`.
+
 ## Evidência de fonte do PDF candidato
 
 Depois de salvar a saída OCR em `scan.json`, exporte as fontes e glifos estruturais do PDF
