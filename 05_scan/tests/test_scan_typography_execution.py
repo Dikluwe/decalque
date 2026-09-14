@@ -25,7 +25,10 @@ class ScanTypographyExecutionTests(unittest.TestCase):
             [("serif", "preserved"), ("vera-serif", "preserved"),
              ("liberation-serif", "violated"),
              ("sans", "violated"), ("mono", "violated"),
-             ("bold", "violated"), ("italic", "violated"), ("condensed", "violated")],
+             ("bold", "violated"), ("italic", "violated"), ("condensed", "violated"),
+             ("size-minus-half", "violated"), ("size-plus-half", "violated"),
+             ("tracking", "violated"), ("word-spacing", "violated"),
+             ("baseline-shift", "violated")],
         )
         self.assertEqual(
             [(item["degradation"], item["control_status"], item["mutation_score"])

@@ -18,7 +18,8 @@ import scan_word_compare
 
 KINDS = (
     "serif", "vera-serif", "liberation-serif", "sans", "mono", "bold",
-    "italic", "condensed",
+    "italic", "condensed", "size-minus-half", "size-plus-half", "tracking",
+    "word-spacing", "baseline-shift",
 )
 
 EXPECTED = {
@@ -116,7 +117,16 @@ def run(binary: Path, fixture_directory: Path, width: int = 1276, height: int = 
                     "regions": [{"detected_lines": [{"id": 0, "word_segments": segments}]}],
                 }
                 comparison = scan_word_compare.compare(page, catalogs[kind])
-                statuses = [word["typography_status"] for word in comparison["words"]]
+                statuses = [
+                    "violated"
+                    if "violated" in (word["status"], word["typography_status"])
+                    else (
+                        "preserved"
+                        if word["status"] == word["typography_status"] == "preserved"
+                        else "unknown"
+                    )
+                    for word in comparison["words"]
+                ]
                 detected = "violated" in statuses
                 cases.append({
                     "candidate": kind,
@@ -128,10 +138,12 @@ def run(binary: Path, fixture_directory: Path, width: int = 1276, height: int = 
                     "words": [
                         {
                             "text": word["word"],
-                            "status": word["typography_status"],
+                            "status": status,
+                            "geometry_status": word["status"],
+                            "typography_status": word["typography_status"],
                             "shape_distance": word["typographic_shape_distance"],
                         }
-                        for word in comparison["words"]
+                        for word, status in zip(comparison["words"], statuses)
                     ],
                 })
             return cases

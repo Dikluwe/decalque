@@ -22,6 +22,11 @@ O segundo estrato mantém DejaVu Serif e altera isoladamente peso para negrito, 
 itálico ou aplica escala horizontal de 75%. As três mutações também integram o denominador do
 `mutation_score`.
 
+O terceiro estrato ataca diferenças sutis de composição: tamanho de 19,5 pt ou 20,5 pt contra
+20 pt, tracking de 0,25 pt, espaço entre palavras acrescido de 3 pt e baseline deslocada em
+2,5 pt. Cada caso deve ser rejeitado por geometria ou perfil tipográfico observado, inclusive
+quando a forma normalizada dos glifos permanece semelhante.
+
 ## Robustez do scan
 
 Repetir a matriz com a referência reduzida a 50% e reamostrada, blur gaussiano de 0,8 px, ruído
