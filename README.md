@@ -110,5 +110,6 @@ decalque/
 `CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
 consome a origem da caixa efectiva. Os diagnósticos de página, `DocumentGeometry` e a
 revisão do motor de comparação também já estão materializados. `02_shell` já aplica o
-perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura; o parsing da CLI
-ainda aguarda especificação própria. O próximo passo implementável é `04_wiring`.
+perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura. `04_wiring` liga
+`PageSource` ao pipeline de geometria, fontes, interpretação e diagnósticos. O parsing da
+CLI ainda aguarda especificação própria.
