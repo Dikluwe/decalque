@@ -104,10 +104,10 @@ decalque/
 
 ## Estado actual
 
-`01_core` implementado numa primeira versão (2026-08-11) — mas as specs evoluíram desde então
-(2026-08-12): `PageGeometry` ganhou `PageBoxModel`/rotação/`user_unit`, `GlyphInstance` foi
-revisado, e `CartesianOrigin` foi **substituído** pela função pura `normalize_to_top_left`
-(`00_nucleo/prompts/coordinate-normalization.md`). O código actual de `01_core` ainda reflecte
-as specs antigas e aguarda revisão conforme os prompts novos. Próximos passos: revisão de
-`01_core` (page_geometry → font_model + cmap → text_interpreter), depois `03_infra`
-(adaptador lopdf), `02_shell` (CLI) e `04_wiring`.
+`PageGeometry`, o modelo de fontes, o parser `ToUnicode`/CMap, `PdfError` e
+`normalize_to_top_left` já refletem as especificações activas de `01_core`.
+`CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
+consome a origem da caixa efectiva. O próximo passo é materializar
+`content-stream-text-model.md` (`GlyphInstance`, operações e intérprete), seguido de
+`03_infra` (adaptador lopdf), diagnósticos/`DocumentGeometry`, `02_shell` (CLI) e
+`04_wiring`.

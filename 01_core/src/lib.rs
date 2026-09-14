@@ -5,6 +5,7 @@
 pub mod content;
 pub mod engine;
 pub mod entities;
+pub mod geometry;
 
 pub use content::{
     build_font_model, parse_tounicode_cmap, CmapDiagnostic, CmapEntry, CmapMapping,
@@ -13,6 +14,6 @@ pub use content::{
 };
 pub use engine::{compare, ComparisonReport, GlyphPair};
 pub use entities::{
-    AxisDirection, CartesianOrigin, DocumentGeometry, GlyphInstance, MeasurementResolution,
-    PageGeometry, PdfError,
+    DocumentGeometry, GlyphInstance, MeasurementResolution, PageGeometry, PdfError,
 };
+pub use geometry::normalize_to_top_left;

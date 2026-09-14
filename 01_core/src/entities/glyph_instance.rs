@@ -32,7 +32,7 @@ use super::page_geometry::PageGeometry;
 /// por conteúdo (ver `engine/compare`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct GlyphInstance {
-    /// Posição já normalizada (`CartesianOrigin::normalize` aplicado):
+    /// Posição já normalizada (`normalize_to_top_left` aplicado):
     /// y-para-baixo, origem no canto superior esquerdo.
     pub position: (f64, f64),
     /// Sequência de codepoints via `ToUnicode`; `None` se não mapeado.
