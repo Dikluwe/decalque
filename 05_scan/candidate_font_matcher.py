@@ -9,6 +9,7 @@ import difflib
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -58,10 +59,38 @@ def font_hypothesis(glyph: dict[str, Any], candidate: str) -> dict[str, Any]:
     }
 
 
+def logical_glyph_order(glyphs: list[dict[str, Any]]) -> list[int]:
+    order: list[int] = []
+    start = 0
+    while start < len(glyphs):
+        first = glyphs[start]
+        first_y = (first.get("position") or [None, None])[1]
+        end = start + 1
+        while end < len(glyphs):
+            current = glyphs[end]
+            current_y = (current.get("position") or [None, None])[1]
+            if current.get("font_ref") != first.get("font_ref") or current_y != first_y:
+                break
+            end += 1
+        classes = {
+            unicodedata.bidirectional(character)
+            for glyph in glyphs[start:end]
+            for character in (glyph.get("text") or "")
+            if unicodedata.bidirectional(character) in {"L", "R", "AL"}
+        }
+        indexes = list(range(start, end))
+        if classes and classes <= {"R", "AL"}:
+            indexes.reverse()
+        order.extend(indexes)
+        start = end
+    return order
+
+
 def compact_candidate(glyphs: list[dict[str, Any]]) -> tuple[str, list[int]]:
     characters: list[str] = []
     owners: list[int] = []
-    for index, glyph in enumerate(glyphs):
+    for index in logical_glyph_order(glyphs):
+        glyph = glyphs[index]
         for character in glyph.get("text") or "":
             if not character.isspace():
                 characters.append(character)

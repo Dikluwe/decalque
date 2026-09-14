@@ -24,7 +24,13 @@ def page(*tokens):
 
 
 def glyph(text, ref="F1", base="ABCDEF+NimbusRoman-Regular", size=12.0):
-    return {"text": text, "font_ref": ref, "base_font": base, "font_size_pt": size}
+    return {
+        "text": text,
+        "font_ref": ref,
+        "base_font": base,
+        "font_size_pt": size,
+        "position": [0, 10],
+    }
 
 
 class CandidateFontMatcherTests(unittest.TestCase):
@@ -79,6 +85,33 @@ class CandidateFontMatcherTests(unittest.TestCase):
         output = MODULE.enrich_page(
             page(token("eco")),
             {"glyphs": [glyph(c) for c in "eco"] + [glyph(c, ref="F2", base="Other-Bold") for c in "eco"]},
+            "candidate.pdf",
+        )
+        self.assertEqual(
+            output["regions"][0]["lines"][0]["tokens"][0]["font"]["status"],
+            "unknown",
+        )
+
+    def test_monodirectional_rtl_run_is_aligned_in_logical_order(self):
+        visual_order = "ملاعلاب ابحرم"
+        output = MODULE.enrich_page(
+            page(token("مرحبا"), token("بالعالم")),
+            {
+                "glyphs": [
+                    glyph(character, base="ABCDEF+NotoNaskhArabic-Bold")
+                    for character in visual_order
+                ]
+            },
+            "candidate.pdf",
+        )
+        words = output["regions"][0]["lines"][0]["tokens"]
+        self.assertEqual([word["font"]["status"] for word in words], ["inferred", "inferred"])
+        self.assertEqual(words[0]["font"]["family"], "NotoNaskhArabic")
+
+    def test_font_without_base_font_stays_unknown(self):
+        output = MODULE.enrich_page(
+            page(token("😀")),
+            {"glyphs": [glyph("😀", base=None)]},
             "candidate.pdf",
         )
         self.assertEqual(

@@ -42,6 +42,9 @@ A família e o tamanho só são preenchidos quando o token inteiro coincide com 
 única fonte e tamanho. O valor descreve a fonte declarada pelo PDF candidato como hipótese;
 não prova sozinho que os pixels do scan foram impressos com a mesma fonte.
 
+Runs puramente RTL, como árabe isolado, são alinhados em ordem Unicode lógica. Texto bidi
+misto e fontes sem `/BaseFont` (observado em emoji colorido) permanecem sem inferência segura.
+
 ## Testes do adaptador
 
 ```sh

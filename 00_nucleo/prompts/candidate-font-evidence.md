@@ -20,6 +20,10 @@ Token parcialmente alinhado, glifo sem Unicode, mistura de recursos/tamanhos, fo
 `/BaseFont` ou correspondência ambígua permanece `unknown`. Espaçamento é normalizado apenas
 para localizar texto e nunca constitui evidência tipográfica.
 
+Runs monodireccionais RTL de uma única fonte e linha podem ser revertidos da ordem visual do
+content stream para a ordem Unicode lógica. Conteúdo bidi misto não autoriza reordenação
+heurística.
+
 ## Observáveis
 
 - enriquecimento não altera texto, spans ou geometria do scan;
