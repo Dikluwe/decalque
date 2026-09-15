@@ -140,6 +140,19 @@ O campo `verdict` agrega conteúdo, geometria e tipografia com precedência cons
 
 ## Execução integrada
 
+Para comparar diretamente os dois modelos visuais do LM Studio e materializar as regiões de
+imagem indicadas pelo OvisOCR2:
+
+```sh
+python3 05_scan/dual_lmstudio_ocr.py pagina.png \
+  --asset-dir output/pagina-assets > output/pagina-dual-ocr.json
+```
+
+O OvisOCR2 é preservado como testemunha de layout, o PaddleOCR-VL como testemunha de texto, e
+`comparison` explicita concordância ou divergência. Cada marcador Ovis
+`images/bbox_X0_Y0_X1_Y1` (coordenadas normalizadas de 0 a 1000) gera um PNG recortado e uma
+caixa em pixels. Nenhuma das transcrições é sobrescrita por consenso implícito.
+
 Com o LM Studio ativo e o catálogo compilado, todo o fluxo de uma página pode ser executado
 por um único comando. A comparação tipográfica também requer `pdftocairo` disponível no PATH:
 
