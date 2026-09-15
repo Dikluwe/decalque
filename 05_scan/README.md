@@ -152,6 +152,21 @@ O OvisOCR2 é preservado como testemunha de layout, o PaddleOCR-VL como testemun
 `comparison` explicita concordância ou divergência. Cada marcador Ovis
 `images/bbox_X0_Y0_X1_Y1` (coordenadas normalizadas de 0 a 1000) gera um PNG recortado e uma
 caixa em pixels. Nenhuma das transcrições é sobrescrita por consenso implícito.
+Os recortes recebem margem superior/lateral de 1,5% da página e margem inferior menor para
+compensar caixas apertadas sem invadir legendas (`--crop-padding` altera a base). Símbolos recorrentes, inclusive espelhados, podem
+ser agrupados pela forma da tinta:
+
+```sh
+python3 05_scan/visual_symbol_catalog.py output/paginas/page-*.json > symbols.json
+```
+
+Se o VLM omitir o marcador de uma ocorrência pequena, use um recorte confirmado como molde;
+o buscador compara componentes de tinta em escala normalizada e considera reflexão horizontal:
+
+```sh
+python3 05_scan/recurring_symbol_finder.py folha.png pagina-*.png \
+  --asset-dir output/folha-ocorrencias > occurrences.json
+```
 
 Com o LM Studio ativo e o catálogo compilado, todo o fluxo de uma página pode ser executado
 por um único comando. A comparação tipográfica também requer `pdftocairo` disponível no PATH:

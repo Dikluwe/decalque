@@ -71,8 +71,9 @@ class DualOcrExecutionTests(unittest.TestCase):
                 output = json.loads(process.stdout)
                 self.assertEqual([call["model"] for call in FakeLmStudio.calls], ["ovis-test", "paddle-test"])
                 self.assertEqual(output["assets"][0]["bbox"], [10, 40, 50, 120])
+                self.assertEqual(output["assets"][0]["crop_bbox"], [8, 37, 52, 121])
                 with Image.open(output["assets"][0]["path"]) as crop:
-                    self.assertEqual(crop.size, (40, 80))
+                    self.assertEqual(crop.size, (44, 84))
                 self.assertEqual(output["comparison"]["status"], "agreement")
         finally:
             server.shutdown()

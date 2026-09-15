@@ -58,7 +58,17 @@ def normalized_text(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
-def capture_regions(image_path: Path, ovis_text: str, asset_dir: Path) -> list[dict[str, Any]]:
+def padded_bbox(bbox: list[int], width: int, height: int, padding_ratio: float) -> list[int]:
+    padding_x = round(width * padding_ratio)
+    padding_top = round(height * padding_ratio)
+    padding_bottom = round(height * padding_ratio / 3)
+    return [max(0, bbox[0] - padding_x), max(0, bbox[1] - padding_top),
+            min(width, bbox[2] + padding_x), min(height, bbox[3] + padding_bottom)]
+
+
+def capture_regions(
+    image_path: Path, ovis_text: str, asset_dir: Path, padding_ratio: float = 0.015
+) -> list[dict[str, Any]]:
     from PIL import Image
 
     with Image.open(image_path) as image:
@@ -74,19 +84,19 @@ def capture_regions(image_path: Path, ovis_text: str, asset_dir: Path) -> list[d
                 round(x1 * width / 1000),
                 round(y1 * height / 1000),
             ]
-            bbox[0] = min(max(bbox[0], 0), width)
-            bbox[2] = min(max(bbox[2], 0), width)
-            bbox[1] = min(max(bbox[1], 0), height)
-            bbox[3] = min(max(bbox[3], 0), height)
-            if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+            source_bbox = bbox
+            crop_bbox = padded_bbox(source_bbox, width, height, padding_ratio)
+            if crop_bbox[2] <= crop_bbox[0] or crop_bbox[3] <= crop_bbox[1]:
                 continue
             output = asset_dir / f"region-{index:03d}.png"
-            image.crop(tuple(bbox)).save(output)
+            image.crop(tuple(crop_bbox)).save(output)
             assets.append(
                 {
                     "source": "ovisocr2",
                     "normalized_bbox": normalized_bbox,
-                    "bbox": bbox,
+                    "bbox": source_bbox,
+                    "crop_bbox": crop_bbox,
+                    "crop_padding_ratio": padding_ratio,
                     "coordinate_space": "image-pixels-ydown",
                     "path": str(output.resolve()),
                 }
@@ -112,6 +122,7 @@ def run(
     base_url: str,
     ovis_model: str,
     paddle_model: str,
+    crop_padding: float = 0.015,
 ) -> dict[str, Any]:
     ovis_text = request_ocr(
         image_path,
@@ -133,7 +144,7 @@ def run(
             "text_witness": {"model": paddle_model, "text": paddle_text},
         },
         "comparison": compare_responses(ovis_text, paddle_text),
-        "assets": capture_regions(image_path, ovis_text, asset_dir),
+        "assets": capture_regions(image_path, ovis_text, asset_dir, crop_padding),
     }
 
 
@@ -144,6 +155,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default="http://127.0.0.1:1234/v1")
     parser.add_argument("--ovis-model", default="ovisocr2")
     parser.add_argument("--paddle-model", default="paddleocr-vl")
+    parser.add_argument("--crop-padding", type=float, default=0.015)
     return parser.parse_args()
 
 
@@ -151,7 +163,7 @@ def main() -> int:
     args = parse_args()
     try:
         json.dump(
-            run(args.image, args.asset_dir, args.base_url, args.ovis_model, args.paddle_model),
+            run(args.image, args.asset_dir, args.base_url, args.ovis_model, args.paddle_model, args.crop_padding),
             sys.stdout,
             ensure_ascii=False,
             indent=2,
