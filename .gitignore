@@ -17,5 +17,17 @@ Thumbs.db
 
 # Logs e temporários
 *.log
+*.tmp
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Saídas e diretórios temporários de execução
+output/
+tmp/
+
+# Ambientes Python locais
+.venv*/
