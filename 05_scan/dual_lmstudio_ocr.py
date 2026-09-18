@@ -123,6 +123,7 @@ def run(
     ovis_model: str,
     paddle_model: str,
     crop_padding: float = 0.015,
+    strict_physical_lines: bool = False,
 ) -> dict[str, Any]:
     ovis_text = request_ocr(
         image_path,
@@ -134,7 +135,11 @@ def run(
         image_path,
         base_url,
         paddle_model,
-        "Transcribe every visible word on this page. Preserve line and paragraph breaks. Do not invent text.",
+        ("Transcribe every visible word on this page. Emit exactly one physical printed text line "
+         "per output line, including captions and page numbers. Preserve blank lines between regions. "
+         "Do not reflow paragraphs and do not invent text."
+         if strict_physical_lines else
+         "Transcribe every visible word on this page. Preserve line and paragraph breaks. Do not invent text."),
     )
     return {
         "schema_version": 1,
@@ -156,19 +161,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ovis-model", default="ovisocr2")
     parser.add_argument("--paddle-model", default="paddleocr-vl")
     parser.add_argument("--crop-padding", type=float, default=0.015)
+    parser.add_argument("--strict-physical-lines", action="store_true")
+    parser.add_argument("--output", type=Path)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        json.dump(
-            run(args.image, args.asset_dir, args.base_url, args.ovis_model, args.paddle_model, args.crop_padding),
-            sys.stdout,
-            ensure_ascii=False,
-            indent=2,
-        )
-        sys.stdout.write("\n")
+        result = run(args.image, args.asset_dir, args.base_url, args.ovis_model,
+                     args.paddle_model, args.crop_padding, args.strict_physical_lines)
+        rendered = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(rendered, encoding="utf-8")
+        else:
+            sys.stdout.write(rendered)
         return 0
     except Exception as error:
         print(f"dual-lmstudio-ocr: {error}", file=sys.stderr)

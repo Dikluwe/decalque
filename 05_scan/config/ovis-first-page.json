@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "inputs": {
+    "page": "output/pdf/altov-typography-trial/source-011.png"
+  },
+  "blocks": [
+    {
+      "id": "format",
+      "type": "normalize-format",
+      "inputs": {"image": "input:page"},
+      "params": {
+        "width_pt": 452.18,
+        "height_pt": 626.31,
+        "side": "right"
+      }
+    },
+    {
+      "id": "observe_raw",
+      "type": "ovis-layout",
+      "inputs": {"image": "format.image"}
+    },
+    {
+      "id": "normalize",
+      "type": "normalize-page",
+      "inputs": {"image": "format.image"}
+    },
+    {
+      "id": "project_visuals",
+      "type": "transform-regions",
+      "inputs": {
+        "image": "normalize.image",
+        "regions": "observe_raw.regions",
+        "transform": "normalize.transform"
+      }
+    },
+    {
+      "id": "observe_ink",
+      "type": "segment-ink",
+      "inputs": {"image": "normalize.image"},
+      "params": {"threshold": 190, "minimum_area": 10}
+    }
+  ]
+}

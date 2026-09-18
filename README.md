@@ -1,4 +1,4 @@
-# Decalque <sub>_comparação geométrica de PDFs, sem OCR, sem pixel_</sub>
+# Decalque <sub>_reconstrução scan → digital e comparação geométrica de PDFs_</sub>
 
 Ferramenta genérica para comparar a posição real de cada traço/glifo desenhado entre dois PDFs
 quaisquer — não compara pixels renderizados (sensível a DPI, antialiasing, tipo de rasterizador) e
@@ -116,3 +116,6 @@ perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura. `04_w
 do Caso 1 compara dois PDFs com `decalque <referencia.pdf> <candidato.pdf> [--page <indice>]`.
 O primeiro adaptador do Caso 2 combina o detector de layout do PaddleOCR-VL com o componente
 de reconhecimento servido localmente pelo LM Studio e emite regiões geométricas em JSON.
+O ciclo de materialização do Caso 2 também gera fonte Typst e PDF digital nativo a partir de um
+manifesto de página, rasteriza referência e candidato sob condições iguais e entrega a medição
+visual auxiliar junto dos artefatos auditáveis.

@@ -1,5 +1,20 @@
 # Adaptador PaddleOCR-VL + LM Studio
 
+## Cadeias programaveis por blocos
+
+`block_ocr_pipeline.py` executa experimentos OCR como grafos declarativos. O exemplo
+`config/ovis-first-page.json` normaliza o formato fisico sem reamostrar, observa a pagina
+com OvisOCR2, normaliza o esquadro, projeta as caixas visuais e segmenta a tinta localmente.
+Valide a cadeia sem executar:
+
+```sh
+python3 05_scan/block_ocr_pipeline.py 05_scan/config/ovis-first-page.json \
+  --output output/block-runs/altov-011 --dry-run
+```
+
+Remova `--dry-run` para executar. Cada bloco recebe um diretorio proprio e a raiz da
+execucao ganha um `manifest.json` com ordem, duracao e caminhos dos artefatos.
+
 Este adaptador usa o detector de layout do pipeline PaddleOCR-VL e delega o reconhecimento
 visual ao modelo `paddleocr-vl` carregado no LM Studio. A saída v2 é JSON com regiões, linhas,
 tokens e hipóteses tipográficas; mensagens do fornecedor são enviadas para stderr.
@@ -139,6 +154,193 @@ O campo `verdict` agrega conteúdo, geometria e tipografia com precedência cons
 `violated` domina, seguido de `unknown`; somente evidência completa pode produzir `preserved`.
 
 ## Execução integrada
+
+## Reconstrução em Typst
+
+## Descoberta de fontes no Google Fonts
+
+Antes da consulta externa, classifique fontes já disponíveis no sistema via Fontconfig:
+
+```sh
+python3 05_scan/local_font_discovery.py --evidence font-evidence.json \
+  --pt-per-px 0.4 --threshold 0.70 --limit 30 > local-font-candidates.json
+```
+
+Para pesquisar somente um banco privado ou cache específico, informe um ou mais diretórios. A
+presença de `--font-dir` desativa a enumeração automática do Fontconfig, mantendo o escopo
+explícito:
+
+```sh
+python3 05_scan/local_font_discovery.py --evidence font-evidence.json \
+  --font-dir "$HOME/.local/share/decalque/fonts" \
+  --font-dir output/google-fonts-cache \
+  --threshold 0.70 > local-font-candidates.json
+```
+
+O comparador é offline, percorre `.ttf`, `.otf`, `.ttc` e `.otc` recursivamente, deduplica o
+conteúdo por SHA-256 e preserva metadados declarados de licença e origem. `matched` significa que
+o primeiro candidato atingiu o limiar; `fallback_required` autoriza o orquestrador a considerar
+uma pesquisa externa, mas não realiza rede; `unknown` preserva ausência de candidato comparável.
+`--pt-per-px` habilita a estimativa do corpo em pontos; por exemplo, uma rasterização a 180 DPI
+usa `72 / 180 = 0.4 pt/px`. Para cada evidência, o relatório estima corpo em pixels/pontos,
+tracking residual em `em` e escala horizontal sem tracking. As métricas internas preservam
+`units_per_em` e avanço do `M` em `em`; a largura do glifo não é confundida com o quadratim.
+
+## Páginas-mestras espelhadas do miolo
+
+Depois de medir caixas de texto, linhas e paginação em algumas páginas representativas, consolide
+dois perfis reutilizáveis — verso/esquerda e reto/direita:
+
+```sh
+python3 05_scan/book_page_masters.py page-observations.json > book-page-masters.json
+```
+
+A posição horizontal da paginação é a evidência prioritária do lado da página. Se ela estiver
+ausente ou central, usa-se primeiro a paridade do número impresso e só então a alternância física.
+Assim, capa e frontispício não fazem o índice do PDF passar por número impresso. Cada mestre contém
+medianas em pontos para margens interna/externa, coluna, topo, base, recuo, entrelinha e centro da
+paginação; campos sem evidência continuam `null`. Páginas especiais, figuras e aberturas de capítulo
+podem manter regiões próprias sobre o mestre sem provocar uma nova calibração do miolo.
+
+O exemplo de miolo possui um ciclo próprio de realimentação raster. Ele varia corpo, corpo do
+título, entrelinha, espaçamento entre parágrafos, largura da coluna, topo e recuo, preservando somente candidatos cujo objetivo
+combinado diminui. A contagem de zonas do corpo impede que linhas sobrepostas pareçam melhores:
+
+```sh
+python3 05_scan/book_spread_feedback.py ocr.json book-page-masters.json livro.pdf \
+  --pages 13 14 --font Suranna --font-path output/google-fonts-cache \
+  --output-dir output/pdf/book-feedback > output/pdf/book-feedback-report.json
+```
+
+Depois de estabilizar a página, decomponha a diferença por linha e palavra:
+
+```sh
+python3 05_scan/line_diff_analyzer.py reference.png candidate.png \
+  --text-file recognized-lines.txt > line-diff.json
+```
+
+O alinhamento aceita cardinalidades diferentes e registra `reflow` em vez de deslocar
+silenciosamente as associações. Pares observados são classificados como posição,
+tracking/largura, tamanho/peso ou diferença localizada. Uma palavra só entra em
+`ocr_review_queue` quando a segmentação de tinta e a quantidade de palavras reconhecidas
+coincidem; o relatório pede revisão, mas nunca altera o OCR automaticamente. Ornamentos e
+zonas sem associação textual continuam explícitos.
+
+## Fonte derivada do scan
+
+O construtor experimental recebe recortes de glifos já associados explicitamente a caracteres,
+alinha as ocorrências pelo baseline, consolida amostras repetidas e gera uma TTF:
+
+```sh
+python3 05_scan/scan_font_builder.py glyph-samples.json output/book-derived.ttf \
+  > output/book-derived-report.json
+```
+
+O manifesto v1 declara `family`, `style`, `metrics.ascender_px`, `metrics.descender_px` e
+`samples`. Cada amostra contém `char`, `path`, `baseline_px`, `advance_px` e, opcionalmente,
+`left_bearing_px`. Somente rótulos Unicode unitários são aceitos: sequências ambíguas como `rn`
+não são promovidas a um glifo. A implementação atual vetoriza tiras horizontais da tinta,
+preserva avanços e ainda não deriva kerning. Ela é adequada para validar se métricas extraídas do
+livro reduzem reflow antes de investir em contornos suavizados.
+
+Quando houver ocorrências alinhadas por linha de base, o modo SDF combina campos de distância
+por mediana, rejeita uma ocorrência aberrante diante de duas concordantes e extrai contornos
+subpixel preservando contraformas:
+
+```sh
+python3 05_scan/scan_font_builder.py glyph-samples.json output/book-derived-sdf.ttf \
+  --vectorization sdf-contour > output/book-derived-sdf-report.json
+```
+
+O relatório registra tinta agregada, quantidade de contornos e pontos por glifo. O modo não
+reconhece caracteres nem inventa métricas; amostras sem interior/exterior ou sem isolinha fechada
+falham explicitamente. `--vectorization scanline` permanece como baseline e fallback.
+
+Com uma chave da Google Fonts Developer API, classifique variantes do catálogo contra um recorte
+de uma única linha. A API fornece o catálogo; o Decalque baixa uma lista limitada e mede a forma
+renderizada localmente:
+
+```sh
+export GOOGLE_FONTS_API_KEY='...'
+python3 05_scan/google_fonts_discovery.py innovation.png \
+  --text Innovation --category serif --variant 700 --limit 30 > font-candidates.json
+```
+
+A chave não é persistida no relatório. A ausência da chave falha explicitamente, e fontes sem a
+variante pedida ou arquivos ilegíveis aparecem em `rejected`.
+
+Para combinar glifos especialmente discriminatórios e permitir variantes diferentes por zona:
+
+```sh
+python3 05_scan/google_fonts_discovery.py --evidence font-evidence.json \
+  --category serif --limit 30 > font-candidates.json
+```
+
+Cada evidência define texto, peso, dimensões (`family`, `weight`, `style`) e variantes aceitas.
+O relatório v2 separa os três escores e preserva a contribuição de cada recorte.
+
+O objetivo principal do Caso 2 inclui materializar uma página digital nativa e fechar o ciclo de
+comparação. Um manifesto inspecionável descreve página, textos, fontes, caixas e imagens; o
+pipeline gera Typst, compila PDF e rasteriza referência e candidato no mesmo DPI:
+
+```sh
+python3 05_scan/typst_reconstruction_pipeline.py page-manifest.json scan.pdf \
+  --source-page 1 --output-dir output/pdf/page-001 > output/pdf/page-001/report.json
+```
+
+As métricas raster são auxiliares e ficam fora de `01_core`; o PDF gerado continua disponível
+para a comparação estrutural do Decalque. Falhas e campos ambíguos não são promovidos a paridade.
+
+Depois da classificação editorial, a página também pode ser organizada por componentes comuns.
+O compositor preserva cada quebra física, mantém `unknown` explícito e reserva integralmente as
+caixas de figuras e tabelas; quando há imagem-fonte, o recorte visual ocupa essa mesma reserva:
+
+```sh
+python3 05_scan/editorial_typst_composer.py editorial/page-018.json page-018.png \
+  --font /caminho/para/fonte.ttf --page-number 18 \
+  --output-dir output/pdf/editorial/page-018
+```
+
+O diretório contém `manifest.json`, a biblioteca reutilizável `editorial-blocks.typ`, a página
+Typst, o PDF pesquisável, o render e a diferença raster. `page.side` distingue automaticamente
+páginas esquerdas e direitas pela paridade informada.
+
+Para um livro inteiro, o executor associa `page-NNN.json` a `page-NNN.png`, trabalha em paralelo,
+retoma páginas que ainda não têm relatório completo, mede cada etapa e une os PDFs:
+
+```sh
+python3 05_scan/editorial_book_composer.py editorial/ rendered-pages/ \
+  --font /caminho/para/fonte.ttf --output-dir output/pdf/editorial-book \
+  --workers 8 --resume --merge
+```
+
+`book-report.json` separa falhas de geração de páginas apenas sinalizadas para revisão textual.
+Uma divergência textual não descarta um PDF válido nem impede a montagem do livro.
+
+Perfis tipográficos documentais seguem outro ciclo: primeiro a página é colocada no esquadro,
+depois métricas de páginas representativas são agregadas e o perfil recebe estado `frozen` e um
+hash. A auditoria posterior apenas cria marcações; não reajusta linhas nem permite escala
+horizontal de glifos. Uma amostra pode ser produzida com:
+
+```sh
+python3 05_scan/typography_profile_trial.py livro.pdf \
+  --pages 10,11,12,13,14 --width-pt 461.18 --height-pt 675.75 \
+  --output-dir output/pdf/typography-trial
+```
+
+Para fechar o ciclo com limites definidos por eixo:
+
+```sh
+python3 05_scan/typst_feedback_optimizer.py page-manifest.json scan.pdf \
+  --output-dir output/pdf/page-001-feedback \
+  --horizontal-threshold 0.002 --vertical-threshold 0.002 --max-cycles 8 \
+  > output/pdf/page-001-feedback/report.json
+```
+
+Cada ciclo preserva manifesto, PDF e métricas. O modo padrão segmenta zonas horizontais de tinta,
+mede centros, alturas e lacunas e move cada região separadamente. `--feedback-mode global` mantém
+a correção por correlação da página inteira como fallback explícito. Cardinalidade zonal ambígua,
+estagnação, dimensões incompatíveis ou orçamento esgotado terminam como `not_converged`.
 
 Para comparar diretamente os dois modelos visuais do LM Studio e materializar as regiões de
 imagem indicadas pelo OvisOCR2:

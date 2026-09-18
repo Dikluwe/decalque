@@ -18,6 +18,72 @@ import typographic_profile
 WORDS = re.compile(r"\S+", re.UNICODE)
 
 
+def margin_word_anchors(
+    ink: list[list[bool]],
+    text: str,
+    line_bbox: list[int],
+    minimum_word_gap: int,
+    edge_band_ratio: float = 0.5,
+) -> dict[str, Any]:
+    """Observe only the first and last word using gaps near the line edges."""
+    unknown = {"margin_anchor_status": "unknown"}
+    words = WORDS.findall(text or "")
+    if (not words or not ink or not ink[0] or len(line_bbox) != 4 or
+            minimum_word_gap < 1 or not 0 < edge_band_ratio <= 0.5):
+        return unknown
+    width = len(ink[0])
+    active = [any(row[x] for row in ink) for x in range(width)]
+    components = []
+    x = 0
+    while x < width:
+        if not active[x]:
+            x += 1
+            continue
+        start = x
+        while x + 1 < width and active[x + 1]:
+            x += 1
+        components.append((start, x + 1))
+        x += 1
+    if not components:
+        return unknown
+
+    def observed_box(start: int, end: int) -> list[int]:
+        ys = [y for y, row in enumerate(ink) if any(row[start:end])]
+        return [line_bbox[0] + start, line_bbox[1] + min(ys),
+                line_bbox[0] + end, line_bbox[1] + max(ys) + 1]
+
+    if len(words) == 1:
+        box = observed_box(components[0][0], components[-1][1])
+        anchor = {"text": words[0], "bbox": box, "boundary_gap_px": None,
+                  "source": "margin-ink-gap"}
+        return {"margin_anchor_status": "observed", "left": anchor,
+                "right": dict(anchor),
+                "anchored_text_bbox": [box[0], line_bbox[1], box[2], line_bbox[3]]}
+
+    gaps = [(components[index][1], components[index + 1][0],
+             components[index + 1][0] - components[index][1], index)
+            for index in range(len(components) - 1)]
+    left_candidates = [gap for gap in gaps
+                       if gap[2] >= minimum_word_gap and gap[0] <= width * edge_band_ratio]
+    right_candidates = [gap for gap in gaps
+                        if gap[2] >= minimum_word_gap
+                        and gap[1] >= width * (1 - edge_band_ratio) - 1]
+    if not left_candidates or not right_candidates:
+        return unknown
+    left_gap = min(left_candidates, key=lambda gap: gap[0])
+    right_gap = max(right_candidates, key=lambda gap: gap[1])
+    left_box = observed_box(components[0][0], components[left_gap[3]][1])
+    right_box = observed_box(components[right_gap[3] + 1][0], components[-1][1])
+    return {
+        "margin_anchor_status": "observed",
+        "left": {"text": words[0], "bbox": left_box, "boundary_gap_px": left_gap[2],
+                 "source": "margin-ink-gap"},
+        "right": {"text": words[-1], "bbox": right_box, "boundary_gap_px": right_gap[2],
+                  "source": "margin-ink-gap"},
+        "anchored_text_bbox": [left_box[0], line_bbox[1], right_box[2], line_bbox[3]],
+    }
+
+
 def estimate_baseline(
     ink: list[list[bool]], start_x: int, end_x: int, offset_y: int = 0
 ) -> tuple[int | None, float]:
@@ -134,6 +200,9 @@ def attach_word_geometry(
             boxes = ink_segments(ink.tolist(), x0, y0, minimum_gap)
             build_word_segments(line, boxes, minimum_gap)
             ink_rows = ink.tolist()
+            line.update(margin_word_anchors(
+                ink_rows, line.get("text") or "", [x0, y0, x1, y1], minimum_gap
+            ))
             for segment in line["word_segments"]:
                 baseline, confidence = estimate_baseline(
                     ink_rows,
