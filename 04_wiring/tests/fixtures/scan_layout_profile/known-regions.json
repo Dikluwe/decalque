@@ -1,0 +1,190 @@
+{
+  "schema": "decalque.scan-observation",
+  "schema_version": 1,
+  "source": {
+    "page_index": 37,
+    "raster": {
+      "artifact_id": "scan-layout-reference-page",
+      "sha256": "99e7a39e216cc95a77a7f32e5fd138af04157cf9a78fa58d3bb5af1f305f80b3",
+      "media_type": "image/x-portable-graymap",
+      "width_px": 2,
+      "height_px": 2
+    }
+  },
+  "producer": {
+    "name": "scan-layout-fixture",
+    "version": "1",
+    "run_id": "known-regions"
+  },
+  "raster_frame": {
+    "id": "scan-px",
+    "unit": "px",
+    "origin": "top-left",
+    "x_direction": "right",
+    "y_direction": "down",
+    "coordinate_basis": "pixel-edges",
+    "extent": [2, 2]
+  },
+  "page_mapping": {
+    "status": "known",
+    "value": {
+      "source_frame_id": "scan-px",
+      "target_frame": {
+        "id": "physical-page",
+        "unit": "pt",
+        "origin": "top-left",
+        "x_direction": "right",
+        "y_direction": "down",
+        "extent": [200.0, 300.0]
+      },
+      "kind": "homography3x3",
+      "matrix": [100.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 1.0],
+      "max_error_pt": 0.125
+    },
+    "basis": "derived",
+    "evidence": ["prov-map"],
+    "confidence": {
+      "status": "known",
+      "value": 1.0,
+      "semantics": "fixture"
+    }
+  },
+  "provenance": [
+    {
+      "id": "prov-map",
+      "stage": "coordinate-transform",
+      "tool_name": "scan-layout-fixture",
+      "tool_version": "1",
+      "model_identifier": "none",
+      "method": "declared projective calibration",
+      "parameters_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "input_artifact_ids": ["scan-layout-reference-page"],
+      "parent_provenance_ids": []
+    },
+    {
+      "id": "prov-layout",
+      "stage": "layout-detection",
+      "tool_name": "scan-layout-fixture",
+      "tool_version": "1",
+      "model_identifier": "fixture-layout-model",
+      "method": "declared region and line observations",
+      "parameters_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_artifact_ids": ["scan-layout-reference-page"],
+      "parent_provenance_ids": []
+    }
+  ],
+  "units": [
+    {
+      "id": "region-zeta",
+      "kind": "region",
+      "reading_order": {
+        "status": "known",
+        "value": 20,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+      },
+      "text": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}
+      }
+    },
+    {
+      "id": "line-alpha-2",
+      "kind": "line",
+      "parent_id": "region-alpha",
+      "reading_order": {
+        "status": "known",
+        "value": 1,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+      },
+      "text": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "geometry": {
+        "bbox": {
+          "status": "known",
+          "value": {"frame_id": "scan-px", "x0": 0.3, "y0": 0.8, "x1": 1.5, "y1": 1.0},
+          "basis": "observed",
+          "evidence": ["prov-layout"],
+          "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+        },
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}
+      }
+    },
+    {
+      "id": "region-alpha",
+      "kind": "region",
+      "reading_order": {
+        "status": "known",
+        "value": 10,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+      },
+      "text": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}
+      }
+    },
+    {
+      "id": "line-zeta-1",
+      "kind": "line",
+      "parent_id": "region-zeta",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+      },
+      "text": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "geometry": {
+        "bbox": {
+          "status": "known",
+          "value": {"frame_id": "scan-px", "x0": 0.5, "y0": 1.2, "x1": 1.8, "y1": 1.5},
+          "basis": "observed",
+          "evidence": ["prov-layout"],
+          "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+        },
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}
+      }
+    },
+    {
+      "id": "line-alpha-1",
+      "kind": "line",
+      "parent_id": "region-alpha",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+      },
+      "text": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []},
+      "geometry": {
+        "bbox": {
+          "status": "known",
+          "value": {"frame_id": "scan-px", "x0": 0.2, "y0": 0.3, "x1": 1.6, "y1": 0.6},
+          "basis": "observed",
+          "evidence": ["prov-layout"],
+          "confidence": {"status": "known", "value": 1.0, "semantics": "fixture"}
+        },
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}
+      }
+    }
+  ],
+  "diagnostics": []
+}

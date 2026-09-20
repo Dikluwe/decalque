@@ -1,0 +1,12 @@
+{
+  "schema": "decalque.scan-observation",
+  "schema_version": 1,
+  "ocr_model": "forbidden-v1-extension",
+  "source": {"page_index": 0, "raster": {"artifact_id": "fixture-raster-v1", "sha256": "0e35216434d3891866924eb171c9c7f9960bc2f5aae9b1600c2aae74446eb728", "media_type": "image/x-portable-graymap", "width_px": 2, "height_px": 2}},
+  "producer": {"name": "independent-oracle-fixture", "version": "1.0.0", "run_id": "unknown-field"},
+  "raster_frame": {"id": "scan-px", "unit": "px", "origin": "top-left", "x_direction": "right", "y_direction": "down", "coordinate_basis": "pixel-edges", "extent": [2, 2]},
+  "page_mapping": {"status": "unknown", "reason": "not-observed", "evidence": []},
+  "provenance": [{"id": "prov", "stage": "text-recognition", "tool_name": "fixture", "tool_version": "1.0.0", "model_identifier": "fixture-model", "method": "fixture-observation", "parameters_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "input_artifact_ids": ["fixture-raster-v1"], "parent_provenance_ids": []}],
+  "units": [{"id": "word-1", "kind": "word", "reading_order": {"status": "known", "value": 0, "basis": "observed", "evidence": ["prov"], "confidence": {"status": "unknown", "reason": "not-observed"}}, "text": {"status": "known", "value": "ola", "basis": "observed", "evidence": ["prov"], "confidence": {"status": "unknown", "reason": "not-observed"}}, "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": []}, "geometry": {"bbox": {"status": "unknown", "reason": "not-observed", "evidence": []}, "polygon": {"status": "unknown", "reason": "not-observed", "evidence": []}, "baseline": {"status": "unknown", "reason": "not-observed", "evidence": []}}}],
+  "diagnostics": []
+}

@@ -1,0 +1,106 @@
+#!/bin/sh
+set -eu
+
+fixture_mode=${0##*/}
+
+case "$fixture_mode" in
+  boundary-*)
+    if [ "$fixture_mode" = "boundary-source" ]; then
+      : > "$0.invoked"
+    fi
+
+    if [ "${1-}" = "--version" ]; then
+      case "$fixture_mode" in
+        boundary-version-exact)
+          printf '%s' '12345678'
+          ;;
+        boundary-version-over)
+          printf '%s' '123456789'
+          ;;
+        *)
+          printf '%s' 'typst-v'
+          ;;
+      esac
+      exit 0
+    fi
+
+    cat >/dev/null
+    case "$fixture_mode" in
+      boundary-stderr-exact)
+        printf '%s' '12345678' >&2
+        printf '%s' 'P'
+        ;;
+      boundary-stderr-over)
+        printf '%s' '123456789' >&2
+        printf '%s' 'P'
+        ;;
+      boundary-pdf-exact)
+        printf '%s' '12345678'
+        ;;
+      boundary-pdf-over)
+        printf '%s' '123456789'
+        ;;
+      *)
+        printf '%s' 'P'
+        ;;
+    esac
+    exit 0
+    ;;
+esac
+
+state_dir=${DECALQUE_FONT_ORACLE_DIR:?missing font oracle state directory}
+mode=${DECALQUE_FONT_ORACLE_MODE:-trace}
+
+next_count() {
+  counter=$1
+  value=0
+  if [ -f "$counter" ]; then
+    IFS= read -r value < "$counter"
+  fi
+  value=$((value + 1))
+  printf '%s\n' "$value" > "$counter"
+  printf '%s\n' "$value"
+}
+
+if [ "${1-}" = "--version" ]; then
+  if [ "$#" -ne 1 ]; then
+    printf '%s\n' 'oracle: unexpected version arguments' >&2
+    exit 91
+  fi
+  version_count=$(next_count "$state_dir/version.count")
+  printf 'version-%s\n' "$version_count" >> "$state_dir/events.log"
+  exec typst --version
+fi
+
+if [ "$#" -ne 7 ] ||
+   [ "$1" != "compile" ] ||
+   [ "$2" != "--format" ] ||
+   [ "$3" != "pdf" ] ||
+   [ "$4" != "--creation-timestamp" ] ||
+   [ "$5" != "0" ] ||
+   [ "$6" != "-" ] ||
+   [ "$7" != "-" ]; then
+  printf '%s\n' 'oracle: unexpected compile arguments' >&2
+  exit 92
+fi
+
+compile_count=$(next_count "$state_dir/compile.count")
+printf 'compile-%s\n' "$compile_count" >> "$state_dir/events.log"
+source_path=$(printf '%s/source-%02d.typ' "$state_dir" "$compile_count")
+cat > "$source_path"
+
+case "$mode" in
+  trace)
+    exec typst "$@" < "$source_path"
+    ;;
+  fixed-pdf)
+    cat "${DECALQUE_FONT_ORACLE_PDF:?missing fixed oracle PDF}"
+    ;;
+  multi-page)
+    printf '%s\n' '#set page(width: 72pt, height: 72pt)' 'first' '#pagebreak()' 'second' | typst "$@"
+    ;;
+  *)
+    printf '%s\n' "oracle: unknown mode $mode" >&2
+    exit 93
+    ;;
+esac

@@ -1,0 +1,81 @@
+#!/bin/sh
+set -eu
+
+mode=${0##*/}
+
+if [ -n "${DECALQUE_ORACLE_MARKER-}" ]; then
+  : > "$DECALQUE_ORACLE_MARKER"
+fi
+
+if [ "$mode" = "source-limit-must-not-run" ]; then
+  : > "$0.invoked"
+  exit 97
+fi
+
+if [ "${1-}" = "--version" ]; then
+  if [ "$#" -ne 1 ]; then
+    printf '%s\n' 'oracle: unexpected version arguments' >&2
+    exit 91
+  fi
+
+  case "$mode" in
+    version-nonzero)
+      printf '%s\n' 'oracle-version-status' >&2
+      exit 23
+      ;;
+    version-overflow)
+      while :; do
+        printf '%s' 'version-output-over-limit-'
+      done
+      ;;
+    version-empty)
+      exit 0
+      ;;
+  esac
+
+  printf '%s\n' 'typst-oracle 0.15.1'
+  exit 0
+fi
+
+if [ "$#" -ne 7 ] ||
+   [ "$1" != "compile" ] ||
+   [ "$2" != "--format" ] ||
+   [ "$3" != "pdf" ] ||
+   [ "$4" != "--creation-timestamp" ] ||
+   [ "$5" != "0" ] ||
+   [ "$6" != "-" ] ||
+   [ "$7" != "-" ]; then
+  printf '%s\n' 'oracle: unexpected compile arguments' >&2
+  exit 92
+fi
+
+cat >/dev/null
+
+case "$mode" in
+  compile-nonzero)
+    printf '%s\n' 'oracle-compile-status' >&2
+    exit 29
+    ;;
+  timeout)
+    while :; do :; done
+    ;;
+  pdf-overflow)
+    while :; do
+      printf '%s' 'pdf-output-over-limit-'
+    done
+    ;;
+  stderr-overflow)
+    while :; do
+      printf '%s' 'stderr-output-over-limit-' >&2
+    done
+    ;;
+  empty-pdf)
+    exit 0
+    ;;
+  invalid-pdf)
+    printf '%s\n' 'definitely not a PDF'
+    exit 0
+    ;;
+esac
+
+cat "$0.pdf"

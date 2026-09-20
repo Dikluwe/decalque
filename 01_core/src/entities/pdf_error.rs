@@ -44,10 +44,7 @@ impl fmt::Display for PdfError {
             PdfError::Parse { message } => {
                 write!(f, "estrutura de PDF inválida: {message}")
             }
-            PdfError::Encrypted => write!(
-                f,
-                "PDF criptografado: esta versão não aceita senha"
-            ),
+            PdfError::Encrypted => write!(f, "PDF criptografado: esta versão não aceita senha"),
             PdfError::InvalidPassword => write!(f, "senha inválida para o PDF criptografado"),
             PdfError::Unsupported { message } => {
                 write!(f, "recurso de PDF não suportado: {message}")
@@ -65,11 +62,17 @@ mod tests {
 
     fn todas_as_variantes() -> Vec<PdfError> {
         vec![
-            PdfError::Io { message: "ficheiro não encontrado".to_string() },
-            PdfError::Parse { message: "xref inválido".to_string() },
+            PdfError::Io {
+                message: "ficheiro não encontrado".to_string(),
+            },
+            PdfError::Parse {
+                message: "xref inválido".to_string(),
+            },
             PdfError::Encrypted,
             PdfError::InvalidPassword,
-            PdfError::Unsupported { message: "filtro JPXDecode".to_string() },
+            PdfError::Unsupported {
+                message: "filtro JPXDecode".to_string(),
+            },
             PdfError::PageNotFound { page_index: 7 },
         ]
     }
@@ -90,11 +93,17 @@ mod tests {
 
     #[test]
     fn variantes_com_mensagem_incluem_a_mensagem_no_display() {
-        let e = PdfError::Io { message: "permissão negada".to_string() };
+        let e = PdfError::Io {
+            message: "permissão negada".to_string(),
+        };
         assert!(e.to_string().contains("permissão negada"));
-        let e = PdfError::Parse { message: "MediaBox ausente".to_string() };
+        let e = PdfError::Parse {
+            message: "MediaBox ausente".to_string(),
+        };
         assert!(e.to_string().contains("MediaBox ausente"));
-        let e = PdfError::Unsupported { message: "filtro JPXDecode".to_string() };
+        let e = PdfError::Unsupported {
+            message: "filtro JPXDecode".to_string(),
+        };
         assert!(e.to_string().contains("filtro JPXDecode"));
     }
 

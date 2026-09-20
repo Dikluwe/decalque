@@ -1,0 +1,26 @@
+{
+  "schema": "decalque.scan-observation",
+  "schema_version": 1,
+  "schema_version": 1,
+  "source": {"page_index": 0, "raster": {"artifact_id": "fixture-raster-v1", "sha256": "0e35216434d3891866924eb171c9c7f9960bc2f5aae9b1600c2aae74446eb728", "media_type": "image/x-portable-graymap", "width_px": 2, "height_px": 2}},
+  "producer": {"name": "independent-oracle-fixture", "version": "1.0.0", "run_id": "duplicate-key"},
+  "raster_frame": {"id": "scan-px", "unit": "px", "origin": "top-left", "x_direction": "right", "y_direction": "down", "coordinate_basis": "pixel-edges", "extent": [2, 2]},
+  "page_mapping": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no calibration"},
+  "provenance": [
+    {"id": "prov-text", "stage": "text-recognition", "tool_name": "fixture-recognizer", "tool_version": "1.0.0", "model_identifier": "fixture-model", "method": "fixture-observation", "parameters_sha256": "1111111111111111111111111111111111111111111111111111111111111111", "input_artifact_ids": ["fixture-raster-v1"], "parent_provenance_ids": []},
+    {"id": "prov-layout", "stage": "layout-detection", "tool_name": "fixture-layout", "tool_version": "1.0.0", "model_identifier": "fixture-layout-model", "method": "fixture-geometry-observation", "parameters_sha256": "2222222222222222222222222222222222222222222222222222222222222222", "input_artifact_ids": ["fixture-raster-v1"], "parent_provenance_ids": []}
+  ],
+  "units": [{
+    "id": "word-geometry",
+    "kind": "word",
+    "reading_order": {"status": "known", "value": 0, "basis": "observed", "evidence": ["prov-layout"], "confidence": {"status": "known", "value": 1.0, "semantics": "fixture-score"}},
+    "text": {"status": "known", "value": "ola", "basis": "observed", "evidence": ["prov-text"], "confidence": {"status": "known", "value": 1.0, "semantics": "fixture-score"}},
+    "span_in_parent": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "top-level word"},
+    "geometry": {
+      "bbox": {"status": "known", "value": {"frame_id": "scan-px", "x0": 0.2, "y0": 0.2, "x1": 1.2, "y1": 0.6}, "basis": "observed", "evidence": ["prov-layout"], "confidence": {"status": "known", "value": 1.0, "semantics": "fixture-score"}},
+      "polygon": {"status": "known", "value": {"frame_id": "scan-px", "points": [[0.2, 0.2], [1.2, 0.2], [1.2, 0.6], [0.2, 0.6]]}, "basis": "observed", "evidence": ["prov-layout"], "confidence": {"status": "known", "value": 1.0, "semantics": "fixture-score"}},
+      "baseline": {"status": "known", "value": {"frame_id": "scan-px", "points": [[0.2, 0.56], [1.2, 0.56]]}, "basis": "observed", "evidence": ["prov-layout"], "confidence": {"status": "known", "value": 1.0, "semantics": "fixture-score"}}
+    }
+  }],
+  "diagnostics": []
+}

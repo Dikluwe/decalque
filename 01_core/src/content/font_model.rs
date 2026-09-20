@@ -31,9 +31,7 @@ impl GlyphCodeDecoder {
     /// em vez de os silenciar.
     pub fn decode(&self, bytes: &[u8]) -> (Vec<u32>, usize) {
         match self {
-            GlyphCodeDecoder::SingleByte => {
-                (bytes.iter().map(|&b| b as u32).collect(), 0)
-            }
+            GlyphCodeDecoder::SingleByte => (bytes.iter().map(|&b| b as u32).collect(), 0),
             GlyphCodeDecoder::IdentityH => {
                 let codigos = bytes
                     .chunks_exact(2)
@@ -182,7 +180,10 @@ pub fn build_font_model(raw: &RawFontData) -> (FontModel, Vec<FontModelDiagnosti
         resource_name: raw.resource_name.clone(),
         base_font: raw.base_font.clone(),
         decoder,
-        widths: FontWidths { default_width, widths: raw.widths.clone() },
+        widths: FontWidths {
+            default_width,
+            widths: raw.widths.clone(),
+        },
         unicode_map,
     };
     (modelo, diagnostics)
@@ -213,8 +214,7 @@ mod tests {
 
     #[test]
     fn identity_h_decodifica_pares_big_endian() {
-        let (codigos, descartados) =
-            GlyphCodeDecoder::IdentityH.decode(&[0x00, 0x01, 0x00, 0x02]);
+        let (codigos, descartados) = GlyphCodeDecoder::IdentityH.decode(&[0x00, 0x01, 0x00, 0x02]);
         assert_eq!(codigos, vec![1, 2]);
         assert_eq!(descartados, 0);
     }
@@ -234,7 +234,10 @@ mod tests {
 
     #[test]
     fn width_of_usa_a_tabela_e_cai_no_default() {
-        let w = FontWidths { default_width: 500.0, widths: vec![(1, 600.0)] };
+        let w = FontWidths {
+            default_width: 500.0,
+            widths: vec![(1, 600.0)],
+        };
         assert_eq!(w.width_of(1), 600.0);
         assert_eq!(w.width_of(99), 500.0);
     }

@@ -32,9 +32,9 @@ fn fail(message: &str) -> ! {
 
 fn main() {
     let mut args = std::env::args_os().skip(1);
-    let path = args.next().unwrap_or_else(|| {
-        fail("uso: decalque-font-catalog <candidato.pdf> [--page <indice>]")
-    });
+    let path = args
+        .next()
+        .unwrap_or_else(|| fail("uso: decalque-font-catalog <candidato.pdf> [--page <indice>]"));
     let mut page_index = 0usize;
     if let Some(option) = args.next() {
         if option != "--page" {
@@ -76,7 +76,9 @@ fn main() {
             .codepoints
             .as_ref()
             .map(|points| points.iter().collect::<String>());
-        let base_font = font_names.get(&glyph.font_ref).and_then(|name| name.as_deref());
+        let base_font = font_names
+            .get(&glyph.font_ref)
+            .and_then(|name| name.as_deref());
         print!(
             "{{\"text\":{},\"font_ref\":{},\"base_font\":{},\"font_size_pt\":{},\"position\":[{},{}],\"advance\":{}}}",
             text.as_deref().map(json_string).unwrap_or_else(|| "null".to_string()),

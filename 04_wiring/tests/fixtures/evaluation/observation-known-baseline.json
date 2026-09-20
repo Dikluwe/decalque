@@ -1,0 +1,159 @@
+{
+  "schema": "decalque.scan-observation",
+  "schema_version": 1,
+  "source": {
+    "page_index": 0,
+    "raster": {
+      "artifact_id": "page-raster",
+      "sha256": "99e7a39e216cc95a77a7f32e5fd138af04157cf9a78fa58d3bb5af1f305f80b3",
+      "media_type": "image/x-portable-graymap",
+      "width_px": 2,
+      "height_px": 2
+    }
+  },
+  "producer": {
+    "name": "independent-evaluation-oracle",
+    "version": "1",
+    "run_id": "materialization-0008-known-baseline"
+  },
+  "raster_frame": {
+    "id": "scan-px",
+    "unit": "px",
+    "origin": "top-left",
+    "x_direction": "right",
+    "y_direction": "down",
+    "coordinate_basis": "pixel-edges",
+    "extent": [2, 2]
+  },
+  "page_mapping": {
+    "status": "known",
+    "value": {
+      "source_frame_id": "scan-px",
+      "target_frame": {
+        "id": "source-page-pt",
+        "unit": "pt",
+        "origin": "top-left",
+        "x_direction": "right",
+        "y_direction": "down",
+        "extent": [144.0, 144.0]
+      },
+      "kind": "homography3x3",
+      "matrix": [72.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 1.0],
+      "max_error_pt": 0.0
+    },
+    "basis": "derived",
+    "evidence": ["prov-map"],
+    "confidence": {
+      "status": "known",
+      "value": 1.0,
+      "semantics": "oracle"
+    }
+  },
+  "provenance": [
+    {
+      "id": "prov-map",
+      "stage": "coordinate-transform",
+      "tool_name": "independent-evaluation-oracle",
+      "tool_version": "1",
+      "model_identifier": "none",
+      "method": "declared fixture",
+      "parameters_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "input_artifact_ids": ["page-raster"],
+      "parent_provenance_ids": []
+    },
+    {
+      "id": "prov-text",
+      "stage": "text-recognition",
+      "tool_name": "independent-evaluation-oracle",
+      "tool_version": "1",
+      "model_identifier": "fixture-text-model",
+      "method": "declared fixture",
+      "parameters_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "input_artifact_ids": ["page-raster"],
+      "parent_provenance_ids": []
+    },
+    {
+      "id": "prov-layout",
+      "stage": "layout-detection",
+      "tool_name": "independent-evaluation-oracle",
+      "tool_version": "1",
+      "model_identifier": "fixture-layout-model",
+      "method": "declared fixture",
+      "parameters_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "input_artifact_ids": ["page-raster"],
+      "parent_provenance_ids": []
+    }
+  ],
+  "units": [
+    {
+      "id": "line-1",
+      "kind": "line",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "observed",
+        "evidence": ["prov-layout"],
+        "confidence": {
+          "status": "known",
+          "value": 1.0,
+          "semantics": "oracle"
+        }
+      },
+      "text": {
+        "status": "known",
+        "value": "Decalque",
+        "basis": "observed",
+        "evidence": ["prov-text"],
+        "confidence": {
+          "status": "known",
+          "value": 1.0,
+          "semantics": "oracle"
+        }
+      },
+      "span_in_parent": {
+        "status": "unknown",
+        "reason": "not-observed",
+        "evidence": []
+      },
+      "geometry": {
+        "bbox": {
+          "status": "known",
+          "value": {
+            "frame_id": "scan-px",
+            "x0": 0.25,
+            "y0": 0.5,
+            "x1": 1.75,
+            "y1": 1.25
+          },
+          "basis": "observed",
+          "evidence": ["prov-layout"],
+          "confidence": {
+            "status": "known",
+            "value": 1.0,
+            "semantics": "oracle"
+          }
+        },
+        "polygon": {
+          "status": "unknown",
+          "reason": "not-observed",
+          "evidence": []
+        },
+        "baseline": {
+          "status": "known",
+          "value": {
+            "frame_id": "scan-px",
+            "points": [[0.25, 1.1], [1.75, 1.1]]
+          },
+          "basis": "observed",
+          "evidence": ["prov-layout"],
+          "confidence": {
+            "status": "known",
+            "value": 1.0,
+            "semantics": "oracle"
+          }
+        }
+      }
+    }
+  ],
+  "diagnostics": []
+}

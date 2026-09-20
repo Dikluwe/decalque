@@ -1,0 +1,77 @@
+#!/bin/sh
+set -eu
+
+state_dir=${DECALQUE_TYPOGRAPHY_ORACLE_DIR:?missing oracle state directory}
+mode=${DECALQUE_TYPOGRAPHY_ORACLE_MODE:-trace}
+
+next_count() {
+  counter=$1
+  value=0
+  if [ -f "$counter" ]; then
+    IFS= read -r value < "$counter"
+  fi
+  value=$((value + 1))
+  printf '%s\n' "$value" > "$counter"
+  printf '%s\n' "$value"
+}
+
+if [ "${1-}" = "--version" ]; then
+  if [ "$#" -ne 1 ]; then
+    printf '%s\n' 'oracle: unexpected version arguments' >&2
+    exit 91
+  fi
+  next_count "$state_dir/version.count" >/dev/null
+  exec typst --version
+fi
+
+if [ "$#" -ne 7 ] ||
+   [ "$1" != "compile" ] ||
+   [ "$2" != "--format" ] ||
+   [ "$3" != "pdf" ] ||
+   [ "$4" != "--creation-timestamp" ] ||
+   [ "$5" != "0" ] ||
+   [ "$6" != "-" ] ||
+   [ "$7" != "-" ]; then
+  printf '%s\n' 'oracle: unexpected compile arguments' >&2
+  exit 92
+fi
+
+compile_count=$(next_count "$state_dir/compile.count")
+source_path=$(printf '%s/source-%02d.typ' "$state_dir" "$compile_count")
+cat > "$source_path"
+
+case "$mode" in
+  trace)
+    exec typst "$@" < "$source_path"
+    ;;
+  identical)
+    if [ ! -f "$state_dir/fixed-source.typ" ]; then
+      cp "$source_path" "$state_dir/fixed-source.typ"
+    fi
+    exec typst "$@" < "$state_dir/fixed-source.typ"
+    ;;
+  fail-last)
+    if [ "$compile_count" -eq "${DECALQUE_TYPOGRAPHY_ORACLE_FAIL_AT:?missing fail count}" ]; then
+      printf '%s\n' 'oracle: requested final compilation failure' >&2
+      exit 29
+    fi
+    exec typst "$@" < "$source_path"
+    ;;
+  divergent-confirmation)
+    typst "$@" < "$source_path"
+    if [ "$compile_count" -ge 2 ]; then
+      printf '\n%% oracle-confirmation-divergence\n'
+    fi
+    ;;
+  ineligible)
+    cat > "$state_dir/ineligible-source.typ" <<'EOF'
+#set page(width: 144pt, height: 144pt, margin: 0pt)
+#rect(width: 1pt, height: 1pt, fill: white)
+EOF
+    exec typst "$@" < "$state_dir/ineligible-source.typ"
+    ;;
+  *)
+    printf '%s\n' "oracle: unknown mode $mode" >&2
+    exit 93
+    ;;
+esac

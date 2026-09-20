@@ -5,3 +5,4 @@ edition.workspace = true
 
 [dependencies]
 decalque-core = { path = "../01_core" }
+sha2 = "0.11"

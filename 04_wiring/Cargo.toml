@@ -15,3 +15,6 @@ path = "src/bin/font_catalog.rs"
 decalque-core = { path = "../01_core" }
 decalque-shell = { path = "../02_shell" }
 decalque-infra = { path = "../03_infra" }
+
+[dev-dependencies]
+serde_json = "1"

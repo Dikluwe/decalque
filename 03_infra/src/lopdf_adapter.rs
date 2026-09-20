@@ -1,7 +1,8 @@
 //! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/lopdf-backend-adapter.md
+//! @prompt 00_nucleo/prompts/scan-typst-candidate-evaluation.md
 //! @layer L3
-//! @updated 2026-09-14
+//! @updated 2026-09-19
 
 use decalque_core::entities::{PageBoxModel, Rect};
 use decalque_core::{
@@ -30,10 +31,33 @@ pub struct PageSource {
 
 pub fn load_page_source(path: &Path, page_index: usize) -> Result<PageSource, PdfError> {
     let document = Document::load(path).map_err(map_load_error)?;
+    load_page_source_from_document(&document, page_index)
+}
+
+pub fn load_single_page_source_from_pdf_bytes(bytes: &[u8]) -> Result<PageSource, PdfError> {
+    let document = Document::load_mem(bytes).map_err(map_load_error)?;
     if document.is_encrypted() {
         return Err(PdfError::Encrypted);
     }
-    validate_catalog(&document)?;
+    let page_count = document.get_pages().len();
+    if page_count != 1 {
+        return Err(PdfError::Parse {
+            message: format!(
+                "PDF candidato deve conter exatamente uma página; encontrou {page_count}"
+            ),
+        });
+    }
+    load_page_source_from_document(&document, 0)
+}
+
+fn load_page_source_from_document(
+    document: &Document,
+    page_index: usize,
+) -> Result<PageSource, PdfError> {
+    if document.is_encrypted() {
+        return Err(PdfError::Encrypted);
+    }
+    validate_catalog(document)?;
 
     let page_id = document
         .get_pages()
@@ -41,17 +65,17 @@ pub fn load_page_source(path: &Path, page_index: usize) -> Result<PageSource, Pd
         .nth(page_index)
         .copied()
         .ok_or(PdfError::PageNotFound { page_index })?;
-    let box_model = extract_page_box_model(&document, page_id)?;
-    let operations = extract_operations(&document, page_id)?;
-    let resources = inherited_object(&document, page_id, b"Resources")?
+    let box_model = extract_page_box_model(document, page_id)?;
+    let operations = extract_operations(document, page_id)?;
+    let resources = inherited_object(document, page_id, b"Resources")?
         .map(|object| object.as_dict().map_err(parse_error))
         .transpose()?;
     let fonts = resources
-        .map(|dictionary| extract_fonts(&document, dictionary))
+        .map(|dictionary| extract_fonts(document, dictionary))
         .transpose()?
         .unwrap_or_default();
     let xobjects = resources
-        .map(|dictionary| extract_xobjects(&document, dictionary))
+        .map(|dictionary| extract_xobjects(document, dictionary))
         .transpose()?
         .unwrap_or_default();
     let hints = PageSourceHints {

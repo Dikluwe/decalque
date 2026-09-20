@@ -1,7 +1,7 @@
 //! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/engine/compare.md
 //! @layer L1
-//! @updated 2026-09-14
+//! @updated 2026-09-19
 //!
 //! Motor de emparelhamento e comparação de dois `DocumentGeometry`.
 //!
@@ -90,9 +90,9 @@ pub struct ComparisonReport<'a> {
 ///    inteira. O deslocamento sistemático continua observável em
 ///    `ComparisonReport::cluster_shifts`.
 ///
-/// O motor não sabe nem precisa de saber qual caso de uso está a servir
-/// (ADR 0001): o que muda entre Caso 1 e Caso 2 é **parâmetro** (a
-/// `MeasurementResolution` passada pelo chamador), não algoritmo.
+/// Este motor serve ao Caso 1 (`DocumentGeometry × DocumentGeometry`). O Caso 2
+/// preserva a assimetria entre `ScanObservation` e o `DocumentGeometry` candidato
+/// no comparador dedicado `compare_scan_observation` (ADR 0004).
 pub fn compare<'a>(
     a: &'a DocumentGeometry,
     b: &'a DocumentGeometry,

@@ -1,7 +1,7 @@
 //! Crystalline Lineage
 //! @prompt 00_nucleo/prompts/content-stream-text-model.md
 //! @layer L1
-//! @updated 2026-09-14
+//! @updated 2026-09-19
 //!
 //! Unidade atómica de comparação: um glifo desenhado numa posição.
 
@@ -9,9 +9,9 @@
 ///
 /// L1: zero I/O — construído por `03_infra` a partir da leitura real do
 /// content stream (`Tj`/`TJ`/`cm`/`Tf`, extracção de `ToUnicode`); esta struct
-/// só representa o resultado. É também o contrato de saída da extracção
-/// externa do Caso 2 (scan→digital): o lado do scan entra no pipeline como um
-/// `DocumentGeometry` produzido fora do núcleo, na mesma forma (ADR 0001).
+/// só representa o resultado. No Caso 2, somente o PDF candidato produz
+/// `GlyphInstance`; o scan permanece `ScanObservation` e nunca fabrica glifos
+/// a partir de região, linha ou palavra (ADR 0004).
 ///
 /// Nota de proveniência (lição do P948): glifos sem codepoints mapeados
 /// (`codepoints: None`) **não são descartados** — ainda têm posição e

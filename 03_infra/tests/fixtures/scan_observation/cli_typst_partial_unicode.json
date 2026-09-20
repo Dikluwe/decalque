@@ -1,0 +1,181 @@
+{
+  "schema": "decalque.scan-observation",
+  "schema_version": 1,
+  "source": {
+    "page_index": 0,
+    "raster": {
+      "artifact_id": "fixture-raster-v1",
+      "sha256": "0e35216434d3891866924eb171c9c7f9960bc2f5aae9b1600c2aae74446eb728",
+      "media_type": "image/x-portable-graymap",
+      "width_px": 2,
+      "height_px": 2
+    }
+  },
+  "producer": {
+    "name": "independent-cli-oracle-fixture",
+    "version": "1.0.0",
+    "run_id": "typst-partial-structural-unicode"
+  },
+  "raster_frame": {
+    "id": "scan-px",
+    "unit": "px",
+    "origin": "top-left",
+    "x_direction": "right",
+    "y_direction": "down",
+    "coordinate_basis": "pixel-edges",
+    "extent": [2, 2]
+  },
+  "page_mapping": {
+    "status": "unknown",
+    "reason": "not-observed",
+    "evidence": [],
+    "detail": "the fixture carries no physical-page calibration"
+  },
+  "provenance": [
+    {
+      "id": "prov-text",
+      "stage": "text-recognition",
+      "tool_name": "fixture-recognizer",
+      "tool_version": "1.0.0",
+      "model_identifier": "fixture-model",
+      "method": "fixture-observation",
+      "parameters_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "input_artifact_ids": ["fixture-raster-v1"],
+      "parent_provenance_ids": []
+    },
+    {
+      "id": "prov-layout",
+      "stage": "layout-detection",
+      "tool_name": "fixture-layout",
+      "tool_version": "1.0.0",
+      "model_identifier": "fixture-layout-model",
+      "method": "fixture-order-observation",
+      "parameters_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_artifact_ids": ["fixture-raster-v1"],
+      "parent_provenance_ids": []
+    }
+  ],
+  "units": [
+    {
+      "id": "line-title",
+      "kind": "line",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "inferred",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "text": {
+        "status": "known",
+        "value": "O Decalque",
+        "basis": "observed",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "span_in_parent": {
+        "status": "unknown",
+        "reason": "not-observed",
+        "evidence": [],
+        "detail": "top-level line"
+      },
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line box"},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line polygon"},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line baseline"}
+      }
+    },
+    {
+      "id": "line-absent",
+      "kind": "line",
+      "reading_order": {
+        "status": "known",
+        "value": 1,
+        "basis": "inferred",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "text": {
+        "status": "known",
+        "value": "conteudo deliberadamente ausente",
+        "basis": "observed",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "span_in_parent": {
+        "status": "unknown",
+        "reason": "not-observed",
+        "evidence": [],
+        "detail": "top-level line"
+      },
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line box"},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line polygon"},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no line baseline"}
+      }
+    },
+    {
+      "id": "word-decalque",
+      "kind": "word",
+      "parent_id": "line-title",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "inferred",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "text": {
+        "status": "known",
+        "value": "Decalque",
+        "basis": "observed",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "span_in_parent": {
+        "status": "known",
+        "value": {"start": 2, "end": 10},
+        "basis": "derived",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "deterministic-unicode-span"}
+      },
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word box"},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word polygon"},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word baseline"}
+      }
+    },
+    {
+      "id": "word-absent",
+      "kind": "word",
+      "parent_id": "line-absent",
+      "reading_order": {
+        "status": "known",
+        "value": 0,
+        "basis": "inferred",
+        "evidence": ["prov-layout"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "text": {
+        "status": "known",
+        "value": "ausente",
+        "basis": "observed",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 0.99, "semantics": "fixture-score"}
+      },
+      "span_in_parent": {
+        "status": "known",
+        "value": {"start": 25, "end": 32},
+        "basis": "derived",
+        "evidence": ["prov-text"],
+        "confidence": {"status": "known", "value": 1.0, "semantics": "deterministic-unicode-span"}
+      },
+      "geometry": {
+        "bbox": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word box"},
+        "polygon": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word polygon"},
+        "baseline": {"status": "unknown", "reason": "not-observed", "evidence": [], "detail": "no word baseline"}
+      }
+    }
+  ],
+  "diagnostics": []
+}

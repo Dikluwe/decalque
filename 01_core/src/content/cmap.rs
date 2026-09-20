@@ -24,7 +24,11 @@ pub enum CmapEntry {
     ///
     /// `dst_start` é **um** scalar: não existe regra de incremento para
     /// sequências multi-caractere (ver `UnsupportedRangeDestination`).
-    Range { src_start: u32, src_end: u32, dst_start: char },
+    Range {
+        src_start: u32,
+        src_end: u32,
+        dst_start: char,
+    },
 }
 
 /// Mapeamento completo extraído de um stream `ToUnicode`.
@@ -81,9 +85,11 @@ impl CmapMapping {
                 CmapEntry::Char { src, dst } if *src == glyph_code => {
                     return Some(dst.clone());
                 }
-                CmapEntry::Range { src_start, src_end, dst_start }
-                    if glyph_code >= *src_start && glyph_code <= *src_end =>
-                {
+                CmapEntry::Range {
+                    src_start,
+                    src_end,
+                    dst_start,
+                } if glyph_code >= *src_start && glyph_code <= *src_end => {
                     let offset = glyph_code - src_start;
                     // O parse validou que todo o intervalo de destino é
                     // scalar válido; o `None` aqui é defesa, não caminho real.
@@ -224,12 +230,7 @@ pub fn parse_tounicode_cmap(bytes: &[u8]) -> CmapParseResult {
             Token::FechaArray => match array.take() {
                 Some(itens) => {
                     linhas_lidas += 1;
-                    adicionar_bfrange_array(
-                        &pendentes[0],
-                        &pendentes[1],
-                        &itens,
-                        &mut resultado,
-                    );
+                    adicionar_bfrange_array(&pendentes[0], &pendentes[1], &itens, &mut resultado);
                     pendentes.clear();
                 }
                 None => resultado.diagnostics.push(CmapDiagnostic::UnknownOperator),
@@ -352,7 +353,12 @@ fn ler_hex(conteudo: &[u8]) -> Token {
     if digitos.is_empty() || digitos.len() % 2 != 0 {
         return Token::HexInvalido;
     }
-    Token::Hex(digitos.chunks(2).map(|par| (par[0] << 4) | par[1]).collect())
+    Token::Hex(
+        digitos
+            .chunks(2)
+            .map(|par| (par[0] << 4) | par[1])
+            .collect(),
+    )
 }
 
 /// Inteiro big-endian a partir dos bytes do código.
@@ -360,7 +366,9 @@ fn ler_hex(conteudo: &[u8]) -> Token {
 /// Códigos com mais de 4 bytes não existem na prática; o `wrapping_shl` evita
 /// pânico e mantém os 4 bytes menos significativos.
 fn inteiro_be(bytes: &[u8]) -> u32 {
-    bytes.iter().fold(0u32, |acc, &b| acc.wrapping_shl(8) | b as u32)
+    bytes
+        .iter()
+        .fold(0u32, |acc, &b| acc.wrapping_shl(8) | b as u32)
 }
 
 /// Descodifica UTF-16BE. `None` se o comprimento for ímpar em bytes ou se as
@@ -483,7 +491,11 @@ mod tests {
     fn bfchar_simples_mapeia_e_nao_diagnostica() {
         let r = parse("beginbfchar <0001> <0041> endbfchar");
         assert_eq!(r.mapping.lookup(0x0001), Some(vec!['A']));
-        assert!(r.diagnostics.is_empty(), "diagnósticos: {:?}", r.diagnostics);
+        assert!(
+            r.diagnostics.is_empty(),
+            "diagnósticos: {:?}",
+            r.diagnostics
+        );
     }
 
     #[test]
@@ -567,7 +579,11 @@ mod tests {
     #[test]
     fn contagem_declarada_correcta_nao_diagnostica() {
         let r = parse("1 beginbfchar <0001> <0041> endbfchar");
-        assert!(r.diagnostics.is_empty(), "diagnósticos: {:?}", r.diagnostics);
+        assert!(
+            r.diagnostics.is_empty(),
+            "diagnósticos: {:?}",
+            r.diagnostics
+        );
     }
 
     #[test]
@@ -647,18 +663,24 @@ mod tests {
 
     #[test]
     fn delimitadores_estruturais_nao_sao_hex_nem_travam_o_tokenizador() {
-        let r = parse(
-            "<< /Metadata { ignored } >> 1 beginbfchar <0001> <0041> endbfchar",
-        );
+        let r = parse("<< /Metadata { ignored } >> 1 beginbfchar <0001> <0041> endbfchar");
         assert_eq!(r.mapping.lookup(0x0001), Some(vec!['A']));
-        assert!(r.diagnostics.is_empty(), "diagnósticos: {:?}", r.diagnostics);
+        assert!(
+            r.diagnostics.is_empty(),
+            "diagnósticos: {:?}",
+            r.diagnostics
+        );
     }
 
     #[test]
     fn codespacerange_e_reconhecido_mas_nao_armazenado() {
         let r = parse("1 begincodespacerange <0000> <FFFF> endcodespacerange");
         assert!(r.mapping.entries.is_empty());
-        assert!(r.diagnostics.is_empty(), "diagnósticos: {:?}", r.diagnostics);
+        assert!(
+            r.diagnostics.is_empty(),
+            "diagnósticos: {:?}",
+            r.diagnostics
+        );
     }
 
     #[test]
