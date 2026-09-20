@@ -2,6 +2,7 @@
 
 **Estado**: aceito
 **Data**: 2026-08-11
+**Revisão da fronteira OCR**: ADR 0004, 2026-09-18
 
 ## Contexto
 
@@ -21,9 +22,10 @@ mesmo núcleo geométrico** (`01_core`):
    stream de glifos e `ToUnicode`. Tolerâncias apertadas (divergência = regressão).
 2. **Paridade scan→digital** — o lado do scan não tem glifos; a extração da geometria de
    texto do original é etapa externa (OCR/análise de imagem, fora do núcleo) que produz um
-   `DocumentGeometry` que alimenta o mesmo pipeline. Tolerâncias e normalizações
-   configuráveis por caso de uso (fontes substituídas, ligaduras expandidas, reflow são
-   diferenças legitimamente esperadas, não erros).
+   `ScanObservation v1` versionado. Um comparador próprio recebe essa observação e o
+   `DocumentGeometry` extraído do PDF digital candidato. Tolerâncias, confiança e
+   granularidade são política configurável do caso de uso; região, linha ou palavra OCR não
+   são convertidas implicitamente em glifos (ADR 0004).
 
 ## Consequências
 
@@ -32,10 +34,19 @@ mesmo núcleo geométrico** (`01_core`):
 - O emparelhamento (`engine/compare`) precisa de normalização de ligaduras — expansão do
   glifo via `ToUnicode` para a sequência de codepoints — para não reportar "fi" vs.
   "f"+"i" como divergência. `GlyphInstance.codepoint` passa a ser sequência, não `char`
-  único (spec a atualizar).
+  único. Essa propriedade continua correta para comparação estrutural de PDFs digitais; o
+  comparador de scan pode reutilizar a mesma representação ao reconstruir a vista textual do
+  candidato, sem fabricar glifos no lado OCR.
 - Pixels continuam fora do núcleo: comparação visual por imagem renderizada é sensível a
   DPI, antialiasing e rasterizador, e foi a abordagem que produziu conclusões
   contraditórias no caso motivador. Se um dia for desejada, é camada opcional fora de
   `01_core`, obrigatoriamente com o mesmo rasterizador e mesmo DPI nos dois lados.
-- `XObject`s de imagem (o conteúdo do scan) participam da comparação por posição e
-  dimensão, não por conteúdo rasterizado.
+- `XObject`s de imagem continuam úteis para diagnosticar páginas baseadas em imagem. O
+  conteúdo OCR comparável chega exclusivamente pela fronteira `ScanObservation`; o núcleo não
+  interpreta pixels nem o conteúdo rasterizado do `XObject`.
+
+## Histórico de Revisões
+
+| Data | Motivo |
+|---|---|
+| 2026-09-18 | ADR 0004 substitui a conversão OCR → `DocumentGeometry` por `ScanObservation × DocumentGeometry → ScanComparisonReport`, preservando a decisão original de dois casos de uso. |

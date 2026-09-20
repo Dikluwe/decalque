@@ -1,121 +1,230 @@
-# Decalque <sub>_reconstrução scan → digital e comparação geométrica de PDFs_</sub>
+# Decalque
 
-Ferramenta genérica para comparar a posição real de cada traço/glifo desenhado entre dois PDFs
-quaisquer — não compara pixels renderizados (sensível a DPI, antialiasing, tipo de rasterizador) e
-não compara texto extraído (cego a duplicação/posição, como já provou ser insuficiente no projeto
-que motivou esta ferramenta). Lê os operadores de desenho do content stream diretamente e reporta
-a diferença de posição real, em pontos.
+Sistema de reconstrução tipográfica em Rust para transformar imagens de páginas de livros em
+documentos digitais que preservem seu conteúdo e sua geometria. O Decalque observa a página,
+formula um documento Typst candidato, materializa o PDF e usa comparação estrutural como sinal
+de convergência. Pixels podem fornecer evidência ao observador, mas não substituem a estrutura do
+PDF gerado nem autorizam completar medidas desconhecidas.
 
-Construída seguindo a Arquitetura Cristalina (Tekt) — `00_nucleo` é o ponto de partida para
-qualquer trabalho neste projeto.
+A arquitetura Tekt do produto possui somente as camadas `00` a `04`; não existe uma quinta camada
+`05_scan`. OCR, modelos de visão, pré-processamento, busca de fontes e o executável Typst podem
+integrar o produto como provedores ou processos substituíveis, mas permanecem fora do núcleo puro.
 
-*Decalque*: papel de decalque reproduz a posição exata de cada traço de um desenho original,
-por transferência directa — não por olhar e redesenhar. É essa a diferença entre esta ferramenta
-e comparar pixels renderizados ou texto extraído: em vez de reinterpretar o que se vê, ela lê a
-posição real de cada traço directamente da fonte (o content stream), como o papel encostado ao
-desenho original.
+## Casos de uso
 
----
+### 1. PDF digital → PDF digital
 
-## O pipeline central (o problema em três perguntas)
+O Decalque materializa `DocumentGeometry` para a referência e para o candidato, emparelha glifos
+por conteúdo e ordem e mede deltas geométricos segundo uma política explícita de tolerância.
+Esse é o fluxo estrutural original e está disponível pela CLI:
 
-Dado um PDF, a ferramenta responde, em ordem, três perguntas — cada uma é uma peça de domínio
-própria, e a resposta de uma condiciona a seguinte:
-
-1. **Qual é o tamanho da folha?** (`PageGeometry`) — a `MediaBox` (ou equivalente) de cada página.
-   Dois PDFs do "mesmo" documento podem legitimamente ter folhas de tamanhos diferentes (por
-   exemplo, `width: auto` resolvendo para valores distintos em compiladores distintos) — isto não
-   é por si só uma divergência a reportar, é o contexto que torna o resto da medição possível.
-2. **Onde fica o ponto (0,0)?** (`normalize_to_top_left`) — o espaço de usuário do PDF é
-   YUp por especificação (origem no canto inferior esquerdo); a inversão YDown só existe via
-   matriz `cm`, que o intérprete já processa na CTM. Resta só a convenção de saída do
-   relatório: YDown, origem no canto superior esquerdo — uma conversão matemática pura, não
-   uma heurística de detecção.
-3. **Com que resolução/tolerância a posição é medida?** (`MeasurementResolution`) — dois traços
-   "na mesma posição" na prática nunca têm exatamente o mesmo float; é preciso um limiar. E esse
-   limiar provavelmente não deveria ser um valor absoluto fixo (0.5pt faz sentido para texto de
-   corpo, mas é enorme relativo a um índice de 6pt, e minúsculo relativo a um título de 40pt) —
-   candidato natural: resolução relativa ao tamanho de fonte/em do que está a ser medido, não um
-   número absoluto único para o documento inteiro. **Decisão fechada (ADR 0001)**: ambas as formas
-   suportadas; a tolerância é parâmetro do caso de uso, não constante do domínio — ver
-   `00_nucleo/prompts/entities/measurement-resolution.md`.
-
-Só depois destas três respostas é que faz sentido comparar dois documentos: extrair a lista de
-glifos desenhados de cada um (`GlyphInstance`), emparelhar os correspondentes entre os dois
-(por conteúdo — codepoint via `ToUnicode` — e ordem de leitura, não por posição absoluta, que é
-precisamente o que está a ser medido), e calcular o delta de posição de cada par, relativo à
-origem apropriada (não necessariamente a origem da página — pode ser a origem do cluster/
-construção a que o glifo pertence, para não confundir "página maior" com "glifo deslocado").
-
-## Escopo: dois casos de uso, camadas distintas de funcionalidade
-
-O Decalque não é uma ferramenta de um único cenário — é o mesmo núcleo geométrico servindo a
-dois casos de uso com exigências diferentes. Deixar isto explícito evita decisões de desenho
-que resolvam um caso e quebrem o outro.
-
-### Caso 1 — Paridade entre versões (o motivador original)
-
-Dois PDFs **digitais** gerados por compiladores/versões diferentes do mesmo documento-fonte
-(por exemplo, duas versões do Typst compilando o mesmo `.typ`). Ambos os lados têm content
-stream com glifos posicionados e `ToUnicode` — o pipeline estrutural completo se aplica sem
-ressalvas. Tolerâncias podem ser apertadas: divergências reais aqui são bugs de regressão.
-
-### Caso 2 — Scan → digital puro (o objetivo principal)
-
-Um PDF **digitalizado** (página como imagem rasterizada, sem texto real) foi convertido para
-um documento digital nativo (por exemplo, via Typst), e o Decalque valida se o PDF gerado
-mantém paridade com o original. Este caso muda a assimetria da comparação:
-
-- O lado do scan **não tem glifos no content stream** — tem `XObject`s de imagem. Extrair a
-  geometria de texto do original exige uma etapa anterior de extração (OCR/análise da imagem),
-  fora do núcleo do Decalque, que produz um `DocumentGeometry` equivalente para alimentar o
-  mesmo pipeline.
-- Diferenças legitimamente esperadas são maiores: fontes substituídas, ligaduras expandidas
-  ("fi" como 1 glifo vs. "f"+"i" separados), reflow de quebra de linha. A política de
-  tolerância e a normalização de emparelhamento (expansão via `ToUnicode`) precisam ser
-  configuráveis por caso de uso, não globais.
-- A comparação continua estrutural — pixels continuam fora do núcleo (sensíveis a DPI,
-  antialiasing, rasterizador; foi essa abordagem que falhou no caso motivador). Comparação
-  visual, se um dia for desejada, é camada opcional fora de `01_core`, com mesmo rasterizador
-  e mesmo DPI nos dois lados.
-
-## Por que isto existe
-
-Um projeto irmão (typst-crystalline, arquitetura Tekt) construiu uma primeira versão disto como
-script interno (`tools/geometry/compare.py`, Python, `pikepdf`) para resolver um problema concreto:
-comparações visuais e por texto extraído produziram conclusões contraditórias entre passos
-consecutivos sobre se um delimitador matemático estava "duplicado" ou não — só resolvido descendo
-ao content stream bruto com posições. Esta ferramenta generaliza essa solução para qualquer par de
-PDFs, e reimplementa em Rust para poder ser embutida/reusada (não só um script standalone).
-
-## Estrutura
-
-```
-decalque/
-├── 00_nucleo/     # Prompts e ADRs (a Semente)
-├── 01_core/       # Modelo de domínio puro: PageGeometry, normalize_to_top_left,
-│                  # MeasurementResolution, GlyphInstance, DocumentGeometry,
-│                  # algoritmo de emparelhamento/diff. Zero I/O.
-├── 02_shell/      # CLI
-├── 03_infra/      # Leitura/parsing real de PDF (content stream, ToUnicode)
-├── 04_wiring/     # main.rs, composição
-├── 05_scan/       # Adaptadores externos de geometria OCR para o Caso 2
-└── _lab/          # Experimentos isolados
+```sh
+cargo run --bin decalque -- referencia.pdf candidato.pdf [--page indice]
 ```
 
-## Estado actual
+### 2. Página de livro observada → documento tipográfico digital
 
-`PageGeometry`, o modelo de fontes, o parser `ToUnicode`/CMap, `PdfError`,
-`normalize_to_top_left`, o intérprete de content stream e o adaptador
-`lopdf` já refletem as especificações activas.
-`CartesianOrigin` foi removido: a transformação para YDown agora é uma função pura que
-consome a origem da caixa efectiva. Os diagnósticos de página, `DocumentGeometry` e a
-revisão do motor de comparação também já estão materializados. `02_shell` já aplica o
-perfil padrão do Caso 1 e mantém métricas agregadas junto da cobertura. `04_wiring` liga
-`PageSource` ao pipeline de geometria, fontes, interpretação e diagnósticos. A CLI mínima
-do Caso 1 compara dois PDFs com `decalque <referencia.pdf> <candidato.pdf> [--page <indice>]`.
-O primeiro adaptador do Caso 2 combina o detector de layout do PaddleOCR-VL com o componente
-de reconhecimento servido localmente pelo LM Studio e emite regiões geométricas em JSON.
-O ciclo de materialização do Caso 2 também gera fonte Typst e PDF digital nativo a partir de um
-manifesto de página, rasteriza referência e candidato sob condições iguais e entrega a medição
-visual auxiliar junto dos artefatos auditáveis.
+Um provedor observa o raster sem consultar o candidato e emite exatamente uma página no contrato
+JSON versionado `decalque.scan-observation`, versão 1. A observação, uma hipótese tipográfica e
+uma política editorial formam um plano; esse plano produz Typst, e o PDF compilado volta ao
+pipeline Rust como candidato estrutural.
+
+```text
+raster -> provedor substituível -> ScanObservation v1
+ScanObservation + hipóteses -> ReconstructionPlan -> Typst -> PDF candidato
+
+PDF candidato
+    -> DocumentGeometry
+
+ScanObservation × DocumentGeometry × ScanComparisonPolicy
+    -> ScanComparisonReport
+```
+
+```sh
+cargo run --bin decalque -- validate-scan-observation observacao.json \
+  --raster pagina.png
+
+cargo run --bin decalque -- reconstruct-scan-lines observacao.json \
+  --raster pagina.png \
+  --font-family "Fonte candidata" \
+  --font-size-pt 10.5 > pagina.typ
+
+cargo run --bin decalque -- evaluate-scan-lines observacao.json \
+  --raster pagina.png \
+  --output-pdf candidato.pdf \
+  --font-family "Fonte candidata" \
+  --font-size-pt 10.5 \
+  --granularity line \
+  --horizontal-tolerance-pt 0.5 \
+  --baseline-tolerance-pt 0.5 > iteracao.json
+
+cargo run --bin decalque -- fit-scan-lines observacao.json \
+  --raster pagina.png \
+  --output-pdf vencedor.pdf \
+  --font-family "Fonte candidata" \
+  --font-size-pt 10 --font-size-pt 12 --font-size-pt 14 \
+  --tracking-pt -0.15 --tracking-pt 0 \
+  --horizontal-tolerance-pt 0.5 \
+  --baseline-tolerance-pt 0.5 > busca.json
+
+cargo run --bin decalque -- scan-observation observacao.json candidato.pdf \
+  --raster pagina.png \
+  --granularity word \
+  --horizontal-tolerance-pt 0.5 \
+  --baseline-tolerance-pt 0.5
+```
+
+O primeiro comando prova isoladamente o contrato e vincula SHA-256, tipo e dimensões aos bytes
+do raster; ele não prova exatidão do OCR. O segundo comando emite isoladamente a fonte do primeiro
+estágio de reconstrução: um fac-símile por linhas em pontos físicos, com hipótese de fonte
+explícita e sem inventar baseline ou parágrafos. `evaluate-scan-lines` fecha uma iteração no
+próprio Decalque: emite a mesma fonte, executa Typst com limites, lê o PDF de uma página em memória,
+compara-o e só então publica o candidato sem sobrescrever um arquivo existente. Seu JSON registra
+a hipótese, a versão do compilador, hashes dos dois artefatos e o relatório estrutural integral.
+`fit-scan-lines` transforma essas medidas em parâmetros Typst por experimento reproduzível: fecha
+uma grade explícita de corpos e trackings, compila e mede todas as hipóteses, seleciona pela pior
+divergência estrutural quantizada e recompila o vencedor antes de publicar. Empate, cobertura
+insuficiente ou suportes geométricos incomparáveis ficam explícitos e não produzem PDF.
+O último comando permite comparar separadamente qualquer PDF candidato e repete obrigatoriamente
+a vinculação antes de abri-lo. `ScanObservation`, `ReconstructionPlan` e
+`DocumentGeometry` são contratos distintos.
+Região, linha ou palavra OCR não viram `GlyphInstance` por aproximação. Claims incertas continuam
+`Unknown`; ausência de transformação física não autoriza derivá-la do PDF candidato. Pixels e
+formatos de fornecedor não entram em `01_core`.
+
+As decisões completas estão na
+[ADR 0004](00_nucleo/adr/0004-fronteira-observacao-scan.md), que protege a fronteira da
+observação, e na
+[ADR 0005](00_nucleo/adr/0005-reconstrucao-tipografica-no-produto.md), que define a reconstrução
+como objetivo do produto, e na
+[ADR 0006](00_nucleo/adr/0006-avaliacao-interna-do-candidato-typst.md), que define a compilação e
+avaliação interna do candidato, e na
+[ADR 0007](00_nucleo/adr/0007-busca-discreta-de-parametros-typst.md), que define a busca discreta
+mensurável. Os contratos protegidos incluem:
+
+- [Caso 2](00_nucleo/prompts/case2-scan-to-digital.md);
+- [ScanObservation v1](00_nucleo/prompts/scan-observation-model.md);
+- [adaptador JSON](00_nucleo/prompts/scan-observation-json-adapter.md);
+- [comparador](00_nucleo/prompts/scan-observation-compare.md);
+- [validador vinculado](00_nucleo/prompts/cli-scan-observation-validate.md);
+- [CLI do Caso 2](00_nucleo/prompts/cli-scan-observation-compare.md);
+- [reconstrução Typst por linhas](00_nucleo/prompts/scan-typst-line-reconstruction.md);
+- [avaliação do candidato Typst](00_nucleo/prompts/scan-typst-candidate-evaluation.md);
+- [busca de corpo e tracking](00_nucleo/prompts/scan-typst-parameter-search.md).
+
+### Como as medidas chegam ao Typst
+
+O `page_mapping` transforma coordenadas do raster em pontos físicos da página. Neste primeiro
+estágio, a tradução é deliberadamente direta:
+
+| Evidência ou hipótese | Plano | Typst |
+|---|---|---|
+| largura e altura do frame físico | `page.extent` | `page(width:, height:)` |
+| canto superior esquerdo da bbox da linha | `target_bbox.x0/y0` | `place(dx:, dy:)` |
+| família, corpo, peso, estilo e tracking | `TypographyHypothesis` explícita | `text(font:, size:, weight:, style:, tracking:)` |
+| largura e altura da bbox | alvo geométrico | não são forçadas; o PDF compilado é medido |
+| baseline observada | alvo opcional | não é inventada quando estiver `Unknown` |
+
+Assim, medidas observadas não são promovidas silenciosamente a parâmetros tipográficos. O
+comparador mede os resíduos do PDF compilado — início, fim, largura, posição vertical e baseline
+quando disponível — e esses resíduos classificam uma grade fechada antes da execução, sem feedback
+entre tentativas. A primeira otimização já pertence ao Decalque: `fit-scan-lines` faz busca discreta
+exaustiva sobre o ciclo verificável, em vez de aplicar uma fórmula como “altura da bbox = tamanho da
+fonte”.
+
+Cada unidade `line` é composta em uma caixa finita com sua largura tipográfica natural. Se a
+hipótese ultrapassar a bbox-alvo ou a página, ela continua sendo uma única linha e o excesso aparece
+como resíduo; o emissor não quebra, comprime, recorta nem reduz o corpo para fazê-la caber. A
+busca atual varia somente corpo e tracking para uma família, peso e estilo fixos. Ela não afirma
+ter identificado a fonte e não converte baseline desconhecida em zero.
+
+### Atestação estrutural da fonte candidata
+
+No fluxo de reconstrução, OCR e modelos de visão continuam sendo observadores: suas caixas, textos
+e níveis de confiança entram como evidência em `ScanObservation`, e lacunas permanecem `Unknown`.
+`reconstruct-scan-lines` transforma essa evidência e uma hipótese tipográfica em código-fonte Typst
+editável; o PDF compilado é um candidato que volta ao Decalque para inspeção estrutural. O candidato
+não realimenta a observação nem o planejamento.
+
+`attest-scan-font` avalia uma única hipótese de família, corpo, peso, estilo e tracking. As entradas
+são a observação, o raster vinculado, o destino do PDF, a hipótese tipográfica, as tolerâncias de
+comparação e, opcionalmente, limiares de confiança e o executável Typst:
+
+```sh
+cargo run --bin decalque -- attest-scan-font observacao.json \
+  --raster pagina.png \
+  --output-pdf candidato-atestado.pdf \
+  --font-family "Fonte candidata" \
+  --font-size-pt 10.5 \
+  --font-weight regular \
+  --font-style normal \
+  --tracking-pt 0 \
+  --horizontal-tolerance-pt 0.5 \
+  --baseline-tolerance-pt 0.5 > atestacao.json
+```
+
+A granularidade é fixa em `line`; não existe opção para alterá-la. A fonte Typst estrita proíbe
+fallback (`fallback: false`), e o PDF de uma página é auditado glifo a glifo: a sequência Unicode e
+todos os recursos de fonte efetivamente usados precisam sustentar a família e a face solicitadas.
+O relatório separa três estados:
+
+- `preserved`: texto e recursos usados sustentam a hipótese. O Decalque serializa o relatório e
+  publica o PDF compilado sem sobrescrever o destino.
+- `violated`: há incompatibilidade demonstrável de texto, família ou variante. O comando emite o
+  relatório JSON, mas não publica PDF.
+- `unknown`: falta evidência necessária, como Unicode de um glifo, recurso inequívoco, `/BaseFont`
+  ou nome classificável. O comando emite o relatório JSON, mas não publica PDF.
+
+Falha operacional deixa stdout vazio e não cria um novo artefato. Essa verificação não identifica
+a fonte histórica do scan, não pesquisa famílias e não
+prova identidade visual ou binária da fonte. O contrato completo está na
+[ADR 0008](00_nucleo/adr/0008-atestacao-estrutural-de-fonte-typst.md) e no
+[prompt da atestação estrutural](00_nucleo/prompts/scan-typst-font-attestation.md).
+
+## Arquitetura
+
+| Diretório | Papel | Limite principal |
+|---|---|---|
+| `00_nucleo/` | Semente normativa | ADRs e prompts dos contratos Rust |
+| `01_core/` | L1 — domínio puro | tipos, invariantes e comparação; sem I/O, JSON, OCR ou rede |
+| `02_shell/` | L2 — política | argumentos, tolerâncias e apresentação |
+| `03_infra/` | L3 — fronteiras | parsing de PDF/entradas, compilador limitado e publicação de artefatos |
+| `04_wiring/` | L4 — composição | liga adaptadores, domínio, política e binários |
+| `_lab/` | incubação | provas e mecanismos ainda não graduados para contratos suportados em `00`–`04` |
+
+A implementação histórica de OCR e reconstrução foi preservada em
+[`_lab/scan_observer/`](_lab/scan_observer/README.md), junto de suas specs experimentais e do
+[registro de migração](_lab/scan_observer/MIGRATION.md). Suas capacidades pertencem ao objetivo
+do Decalque, mas só passam a ser suportadas quando graduadas para contratos e adaptadores do
+produto; seus formatos intermediários não são API.
+
+## Estado atual
+
+- O Caso 1 possui modelo de página e fonte, parser `ToUnicode`/CMap, intérprete de content stream,
+  diagnósticos, adaptador `lopdf`, motor de comparação, políticas e CLI digital.
+- A fronteira do Caso 2 está materializada em Rust: modelo e validação de domínio, adaptador JSON
+  estrito, vinculação ao raster, planejamento geométrico por linhas, emissão Typst determinística,
+  compilação limitada, materialização do PDF em memória, comparador tri-state e CLIs
+  `validate-scan-observation`, `reconstruct-scan-lines`, `evaluate-scan-lines`, `fit-scan-lines` e
+  `scan-observation`. O núcleo consome evidência e planeja; OCR e processos concretos permanecem
+  em adaptadores compostos.
+- O laboratório Python foi reorganizado sem apagar código, testes, fixtures, configurações ou
+  aprendizado documental. Seu produtor conservador Paddle emite uma unidade `line` por detecção,
+  sem fabricar palavras ou glifos.
+
+## Desenvolvimento
+
+Execute os gates do produto Rust na raiz:
+
+```sh
+cargo test --workspace
+```
+
+A suíte do produtor externo é independente:
+
+```sh
+python3 -m unittest discover -s _lab/scan_observer/tests -p 'test_*.py' -v
+```
+
+Novas capacidades do produto devem começar em `00_nucleo/` e respeitar a direção de dependência
+`L4 -> L3/L2 -> L1`. Experimentos do produtor externo permanecem em `_lab/scan_observer/`.

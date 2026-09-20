@@ -3,13 +3,15 @@
 **Camada**: L1 — `01_core`
 **Arquivo gerado**: `01_core/src/engine/compare.rs` + testes no mesmo ficheiro
 **Depende de**: `00_nucleo/prompts/document-geometry.md` (`DocumentGeometry`), `00_nucleo/prompts/content-stream-text-model.md` (`GlyphInstance`), `00_nucleo/prompts/entities/measurement-resolution.md` (`MeasurementResolution`)
+**ADR**: `00_nucleo/adr/0004-fronteira-observacao-scan.md` (limite frente ao Caso 2)
 
 ## Contexto
 
 Dado dois `DocumentGeometry` (posições já normalizadas pelo intérprete via
 `normalize_to_top_left` — ver `coordinate-normalization.md`), emparelhar os `GlyphInstance`
 correspondentes e calcular o delta de posição de cada par, usando a `MeasurementResolution`
-para decidir o que conta como divergência.
+para decidir o que conta como divergência. Este é o motor estrutural por glifo; observações OCR
+por região, linha ou palavra usam `scan-observation-compare.md` (ADR 0004).
 
 ## Lições do protótipo Python (P948, projecto irmão) a preservar no desenho
 
@@ -76,12 +78,12 @@ geração. Decisões do dono (2026-08-12):
 - **`font_ref`**: **não usado para agrupar na v1** — nomes de fonte divergem legitimamente
   entre compiladores; agrupar por fonte esconderia divergências de conteúdo.
 - **`render_mode`**: **não usado na v1** (decisão do dono, 2026-08-12). Glifos invisíveis
-  (`Tr 3`) participam da comparação como quaisquer outros — é o que permite comparar um
-  scan pesquisável (camada de OCR) contra um digital nativo sem tratamento especial. Filtrar
-  por modo de renderização, se um dia for desejado, é política de relatório (`02_shell`) ou
-  parâmetro do caso de uso, não algoritmo do motor. O diagnóstico que sinaliza a presença de
+  (`Tr 3`) participam da comparação estrutural como quaisquer outros quando já existem no
+  content stream do PDF. Filtrar por modo de renderização, se um dia for desejado, é política
+  de relatório (`02_shell`), não algoritmo do motor. O diagnóstico que sinaliza a presença de
   texto invisível é `TextInterpreterDiagnostic::InvisibleTextPresent`
-  (`content-stream-text-model.md`), não sai do motor.
+  (`content-stream-text-model.md`), não sai do motor. Essa preservação não converte observação
+  OCR externa em `DocumentGeometry`.
 
 ## Instrução (esqueleto, refinar na implementação)
 
@@ -162,14 +164,16 @@ Regras de fronteira:
   cobertura ao lado. Uma mediana de `0.02pt` sobre 3 de 400 glifos não é paridade — é uma
   medição que quase não aconteceu.
 
-## Ligação ao Caso 2 (scan→digital)
+## Limite frente ao Caso 2 (scan→digital)
 
-O mesmo motor serve o Caso 2 sem alteração estrutural: o lado do scan entra como um
-`DocumentGeometry` produzido por extracção externa (ver
-`00_nucleo/prompts/case2-scan-to-digital.md`). O que muda por caso de uso é **parâmetro, não
-algoritmo**: a `MeasurementResolution` passada pelo chamador (tolerância mais larga no Caso 2)
-e a relevância da normalização de ligaduras (item 1). O motor não sabe nem precisa de saber de
-que caso de uso está a servir — documentar isto no doc-comment de `compare`.
+Este motor não recebe `ScanObservation`. No Caso 2, somente o PDF candidato é materializado como
+`DocumentGeometry`; `scan-observation-compare.md` constrói uma vista de linhas/palavras dos seus
+glifos e a compara com as claims OCR. A expansão Unicode de ligaduras permanece uma propriedade
+reutilizável da representação candidata, mas não autoriza fabricar glifos no lado scan.
+
+Qualquer adaptador que converta região, linha ou palavra OCR em `GlyphInstance` para chamar
+`compare` viola a ADR 0004. O doc-comment da implementação deve registrar esse limite quando o
+contrato for materializado por um implementador posterior.
 
 ## Critérios de verificação
 
@@ -236,3 +240,4 @@ Então a sequência textual emparelha (sem divergência de conteúdo) e nenhum d
 | 2026-08-12 | Decisão do dono (achado 6, consequência): `cluster_shifts: Vec<ClusterShift>` exposto no relatório. O deslocamento mediano fica calculado de qualquer forma, e sem o expor um deslocamento sistemático de linha ou de página deixa de ser observável em qualquer sítio. Nunca somado aos deltas dos glifos | `compare.rs` (revisão) |
 | 2026-08-12 | Decisão do dono (achado 5): métricas agregadas passam a `Option<f64>` (`None` com `pairs` vazio) e o relatório ganha `Coverage` por lado. Com `f64`, um relatório sem pares declarava mediana e máximo `0.0` — paridade perfeita no pior caso possível — e o caso esparso (poucos pares em muitos glifos) tinha o mesmo sintoma sem que o tipo o denunciasse. Invariante `matched + unmatched == total`; `pairs.len()` declarado inválido como medida de cobertura (pares 1-para-N); regra para `02_shell` de nunca apresentar mediana sem cobertura | `compare.rs` (revisão) |
 | 2026-08-12 | Revisão do dono: secção "Como o motor usa os campos do novo `GlyphInstance`" — `Unmapped` emparelha posicionalmente por x dentro do cluster (nunca por `glyph_code`); `advance` e `font_ref` fora da v1; `font_size_pt` no cluster e na resolução; `Depende de` com `document-geometry.md`; referência à normalização corrigida para `normalize_to_top_left` | — |
+| 2026-09-18 | ADR 0004: removida a entrada OCR→`DocumentGeometry`; o motor permanece `DocumentGeometry × DocumentGeometry` e o Caso 2 ganha comparador dedicado. | futura revisão de documentação do motor |
